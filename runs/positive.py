@@ -4,16 +4,16 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import shutil
 
-from goodreads import preprocessing
-from goodreads import models
-from goodreads import data
-from goodreads import experiment
+import preprocessing
+import models
+import data
+import experiment
 
-PATH = '../../datasets/goodreads/comics/'
+PATH = '../../MyExperiments/datasets/goodreads/comics/'
 
 # Set Tensorboard
-shutil.rmtree('tensorboard/positive', ignore_errors=True)
-writer = SummaryWriter('tensorboard/positive')
+shutil.rmtree('../tensorboard/positive', ignore_errors=True)
+writer = SummaryWriter('../tensorboard/positive')
 
 # Detect Device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
