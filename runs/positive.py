@@ -3,6 +3,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import shutil
+import time
 
 import preprocessing
 import models
@@ -11,9 +12,10 @@ import experiment
 
 PATH = '../../MyExperiments/datasets/goodreads/comics/'
 
-# Set Tensorboard
+# Delete Previous Tensorboard Related Folder
 shutil.rmtree('../tensorboard/positive', ignore_errors=True)
-writer = SummaryWriter('../tensorboard/positive')
+# Wait for 1 second in order to tensorboard related folder get deleted correctly
+time.sleep(3)
 
 # Detect Device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -56,6 +58,9 @@ criterion = nn.MSELoss()
 
 # Set Optimizer
 optimizer = torch.optim.Adam(recsys.parameters(), lr=LEARNING_RATE)
+
+# Set Tensorboard
+writer = SummaryWriter('../tensorboard/positive')
 
 # Execute Experiment
 experiment = experiment.Experiment(recsys, train_loader, val_loader, test_loader,

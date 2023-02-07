@@ -1,9 +1,12 @@
+import time
+
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import StepLR, ExponentialLR
 import shutil
+import time
 
 import preprocessing
 import models
@@ -13,16 +16,18 @@ import experiment
 
 PATH = '../../MyExperiments/datasets/goodreads/comics/'
 
-# Set Tensorboard
-shutil.rmtree('../tensorboard/positive_binary', ignore_errors=True)
-writer = SummaryWriter('../tensorboard/positive_binary')
+# Delete Previous Tensorboard Related Folder
+shutil.rmtree('../tensorboard/positive_binary', ignore_errors=False)
+# Wait for 1 second in order to tensorboard related folder get deleted correctly
+time.sleep(3)
+
 
 # Detect Device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print('DEVICE IS: ', device)
 
 # Hyper Parameters
-EPOCHS = 100
+EPOCHS = 5
 BATCH_SIZE = 4
 INPUT_SIZE = 768
 OUTPUT_SIZE = 1
@@ -65,6 +70,8 @@ optimizer = torch.optim.Adam(recsys.parameters(), lr=LEARNING_RATE)
 exp_lr_scheduler = StepLR(optimizer, step_size=50, gamma=0.1)
 # exp_lr_scheduler = ExponentialLR(optimizer, gamma=0.1)
 
+# Set Tensorboard
+writer = SummaryWriter('../tensorboard/positive_binary')
 
 # Execute Experiment
 experiment = experiment.Experiment(recsys, train_loader, val_loader, test_loader,

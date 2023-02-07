@@ -1,4 +1,6 @@
 import torch
+import time
+import datetime
 
 
 class Experiment:
@@ -127,9 +129,11 @@ class Experiment:
 
     def run(self, lr_scheduler=None, verbose=True):
 
+        start_time = time.time()
+
         print('-------- Training --------')
         self.model.to(self.device)
-        epoch_loss = 0.0
+
         # Training Loop
         for epoch in range(self.epochs):
             # Training
@@ -143,3 +147,6 @@ class Experiment:
         # Testing
         print('-------- Testing --------')
         self.__test(self.test_data)
+
+        print('-------- Finished --------')
+        print('Runtime: ', time.strftime('%H:%M:%S', time.gmtime(time.time() - start_time)))
