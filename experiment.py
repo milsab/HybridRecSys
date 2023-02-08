@@ -1,6 +1,6 @@
 import torch
 import time
-import datetime
+import wandb
 
 
 class Experiment:
@@ -52,7 +52,7 @@ class Experiment:
             predictions = torch.round(predictions)
             train_corrects += (predictions == targets.squeeze(1)).sum().item()
 
-        # schedule the learning rate for the next epoch of training
+        # schedule the learning rate for the next epoch of training if it has set before
         if lr_scheduler:
             lr_scheduler.step()
 
@@ -104,7 +104,9 @@ class Experiment:
                 n_correct += (predictions == targets).sum().item()
 
             accuracy = n_correct / (len(test_data) * test_data.batch_size)
-            print('Test Accuracy: %', 100*accuracy)
+            if wandb.run is not None:
+                wandb.log({'Test Acc': accuracy})
+            print('Test Accuracy: %', 100 * accuracy)
 
     def __display_results(self, train_loss, train_corrects, val_loss, val_corrects, epoch):
         avg_train_loss = train_loss / len(self.train_data)
@@ -114,7 +116,8 @@ class Experiment:
         val_acc = (val_corrects / (len(self.val_data) * self.val_data.batch_size))
 
         if (epoch + 1) % 10 == 0:
-            print('Epoch: {} - Train Loss: {:.6f}, Validation Loss: {:.6f} - Train ACC: {:.6f}, Validation ACC: {:.6f}, Learning Rate: {}'.format(
+            print('Epoch: {} - Train Loss: {:.6f}, Validation Loss: {:.6f} - '
+                  'Train ACC: {:.6f}, Validation ACC: {:.6f}, Learning Rate: {}'.format(
                 epoch + 1,
                 avg_train_loss,
                 avg_val_loss,
@@ -122,10 +125,17 @@ class Experiment:
                 val_acc,
                 self.optimizer.param_groups[0]["lr"]
             ))
+
         self.writer.add_scalar('Training Loss', avg_train_loss, epoch)
         self.writer.add_scalar('Training Accuracy', train_acc, epoch)
         self.writer.add_scalar('Validation Loss', avg_val_loss, epoch)
         self.writer.add_scalar('Validation Accuracy', val_acc, epoch)
+
+        # self.writer.add_graph(self.model, self.train_data)
+
+        if wandb.run is not None:
+            wandb.log({'Train_Loss': avg_train_loss, 'Train Acc': train_acc,
+                   'Validation Los': avg_val_loss, 'Validation Acc': val_acc})
 
     def run(self, lr_scheduler=None, verbose=True):
 
@@ -147,6 +157,8 @@ class Experiment:
         # Testing
         print('-------- Testing --------')
         self.__test(self.test_data)
+
+        wandb.finish()
 
         print('-------- Finished --------')
         print('Runtime: ', time.strftime('%H:%M:%S', time.gmtime(time.time() - start_time)))

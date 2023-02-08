@@ -68,7 +68,6 @@ optimizer = torch.optim.Adam(recsys.parameters(), lr=LEARNING_RATE)
 
 # Set LR_Scheduler
 exp_lr_scheduler = StepLR(optimizer, step_size=50, gamma=0.1)
-# exp_lr_scheduler = ExponentialLR(optimizer, gamma=0.1)
 
 # Set Tensorboard
 writer = SummaryWriter('../tensorboard/positive_binary')

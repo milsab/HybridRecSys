@@ -36,5 +36,5 @@ class RecSysMulti(RecSys):
         super(RecSysMulti, self).__init__(n_input_size, output_size)
 
     def forward(self, x):
-        out = super().forward(self, x)
+        out = super().forward(x)
         return torch.softmax(self.linear3(out), dim=0)
