@@ -11,6 +11,7 @@ import preprocessing
 import data
 import experiment
 
+# Default Hyper-Parameters
 DATASET_PATH = '../../MyExperiments/datasets/goodreads/comics/'
 TENSORBOARD_PATH = '../tensorboard/'
 EPOCHS = 5
@@ -18,6 +19,8 @@ BATCH_SIZE = 4
 LEARNING_RATE = 0.001
 TRAINING_RATIO = 0.9
 TEST_RATIO = 0.1
+WEIGHT_DECAY = 0
+DROPOUT = False
 
 
 class Run:
@@ -27,8 +30,8 @@ class Run:
                  ds_path=DATASET_PATH,
                  batch_size=BATCH_SIZE,
                  training_ratio=TRAINING_RATIO, test_ratio=TEST_RATIO,
-                 epochs=EPOCHS, lr=LEARNING_RATE,
-                 lr_scheduler=None):
+                 epochs=EPOCHS, lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY,
+                 lr_scheduler=None, dropout=DROPOUT):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.model = model.to(self.device)
@@ -51,7 +54,9 @@ class Run:
 
         self.learning_rate = lr
         self.epochs = epochs
+        self.weight_decay = weight_decay
         self.lr_scheduler = lr_scheduler
+        self.dropout = dropout
 
     def __reset_tensorboard(self):
         shutil.rmtree(TENSORBOARD_PATH + self.tensorboard_name, ignore_errors=True)
@@ -65,6 +70,9 @@ class Run:
             init_lr=self.learning_rate,
             tr_ratio=self.training_ratio,
             ts_ratio=self.test_ratio,
+            weight_decay=self.weight_decay,
+            batch_size=self.batch_size,
+            dropout=self.dropout,
             optimizer=self.optimizer.__class__.__name__,
             loss=self.criterion.__class__.__name__,
             lr_schedule=self.lr_scheduler.__class__.__name__,
@@ -80,6 +88,7 @@ class Run:
         )
 
     def start(self):
+
         # Set WANDB.AI
         if self.wandb_name:
             self.__set_wandb_ai()
@@ -101,10 +110,10 @@ class Run:
 
         # Create DataLoaders
         train_ds = data.GoodreadsDataset(x_train, y_train, users_embeddings, items_embeddings)
-        train_loader = DataLoader(dataset=train_ds, batch_size=self.batch_size)
+        train_loader = DataLoader(dataset=train_ds, batch_size=self.batch_size, shuffle=True)
 
         val_ds = data.GoodreadsDataset(x_val, y_val, users_embeddings, items_embeddings)
-        val_loader = DataLoader(dataset=val_ds, batch_size=self.batch_size)
+        val_loader = DataLoader(dataset=val_ds, batch_size=self.batch_size, shuffle=True)
 
         test_ds = data.GoodreadsDataset(x_test, y_test, users_embeddings, items_embeddings)
         test_loader = DataLoader(dataset=test_ds, batch_size=self.batch_size)
@@ -116,8 +125,7 @@ class Run:
         optimizer = self.optimizer
 
         # Set Tensorboard
-        tb = TENSORBOARD_PATH + self.tensorboard_name
-        writer = SummaryWriter(tb)
+        writer = SummaryWriter(TENSORBOARD_PATH + self.tensorboard_name)
 
         # Execute Experiment
         my_experiment = experiment.Experiment(self.model, train_loader, val_loader, test_loader,

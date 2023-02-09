@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import time
 import wandb
 
@@ -23,8 +24,10 @@ class Experiment:
         train_loss = 0.0
         train_corrects = 0
         for inputs, targets in train_data:
-            inputs.to(self.device)
-            targets.to(self.device)
+            inputs = inputs.to(self.device)
+            targets = targets.to(self.device)
+
+            # self.writer.add_graph(self.model, inputs[0])
 
             # make the target value as a columns instead of one row
             targets = targets.view(targets.shape[0], 1)
@@ -33,10 +36,10 @@ class Experiment:
             self.optimizer.zero_grad()
 
             # Forward Pass
-            predicted_targets = self.model(inputs)
+            outputs = self.model(inputs)
 
-            # Calculate Loss
-            loss = self.criterion(predicted_targets, targets)
+            # Calculate loss
+            loss = self.criterion(outputs, targets)
 
             # Backward Pass
             loss.backward()
@@ -47,8 +50,8 @@ class Experiment:
             # loss.item() is batch loss, so we add them up to calculate train_loss
             train_loss += loss.item()
 
-            # Adding following code additionally
-            predictions, _ = torch.max(predicted_targets, 1)
+            # Adding following code to calculate accuracy
+            predictions, _ = torch.max(outputs, 1)
             predictions = torch.round(predictions)
             train_corrects += (predictions == targets.squeeze(1)).sum().item()
 
@@ -64,14 +67,14 @@ class Experiment:
         val_corrects = 0
         with torch.no_grad():
             for inputs, targets in val_data:
-                inputs.to(self.device)
-                targets.to(self.device)
+                inputs = inputs.to(self.device)
+                targets = targets.to(self.device)
                 targets = targets.view(targets.shape[0], 1)  # make the target value as a columns instead of one row
-                predicted_targets = self.model(inputs)
-                loss = self.criterion(predicted_targets, targets)
+                outputs = self.model(inputs)
+                loss = self.criterion(outputs, targets)
                 val_loss += loss.item()
 
-                predictions, _ = torch.max(predicted_targets, 1)
+                predictions, _ = torch.max(outputs, 1)
                 predictions = torch.round(predictions)
                 val_corrects += (predictions == targets.squeeze(1)).sum().item()
 
@@ -85,16 +88,16 @@ class Experiment:
 
         with torch.no_grad():
             for inputs, targets in test_data:
-                inputs.to(self.device)
-                targets.to(self.device)
+                inputs = inputs.to(self.device)
+                targets = targets.to(self.device)
 
-                predicted_targets = self.model(inputs)
+                outputs = self.model(inputs)
 
                 # _ = value, index of classes (between 0 and 4)
                 # _, predictions = torch.max(predicted_targets, 1)
 
                 # the following is for when we use sigmoid and binary data with Binary Cross Entropy
-                predictions, _ = torch.max(predicted_targets, 1)
+                predictions, _ = torch.max(outputs, 1)
                 predictions = torch.round(predictions)
 
                 # the following is for when we use softmax and regular data
@@ -106,7 +109,7 @@ class Experiment:
             accuracy = n_correct / (len(test_data) * test_data.batch_size)
             if wandb.run is not None:
                 wandb.log({'Test Acc': accuracy})
-            print('Test Accuracy: %', 100 * accuracy)
+            print('Test Acc: %', 100 * accuracy)
 
     def __display_results(self, train_loss, train_corrects, val_loss, val_corrects, epoch):
         avg_train_loss = train_loss / len(self.train_data)
@@ -131,18 +134,16 @@ class Experiment:
         self.writer.add_scalar('Validation Loss', avg_val_loss, epoch)
         self.writer.add_scalar('Validation Accuracy', val_acc, epoch)
 
-        # self.writer.add_graph(self.model, self.train_data)
-
         if wandb.run is not None:
-            wandb.log({'Train_Loss': avg_train_loss, 'Train Acc': train_acc,
-                   'Validation Los': avg_val_loss, 'Validation Acc': val_acc})
+            wandb.log({'TR. Loss': avg_train_loss, 'TR. Acc': train_acc,
+                       'VAL. Loss': avg_val_loss, 'VAL. Acc': val_acc})
 
     def run(self, lr_scheduler=None, verbose=True):
 
         start_time = time.time()
 
         print('-------- Training --------')
-        self.model.to(self.device)
+        self.model = self.model.to(self.device)
 
         # Training Loop
         for epoch in range(self.epochs):

@@ -7,9 +7,12 @@ from run import Run
 
 INPUT_SIZE = 768
 OUTPUT_SIZE = 1
+BATCH_SIZE = 4
 LEARNING_RATE = 0.001
-EPOCHS = 20
+WEIGHT_DECAY = 0
+EPOCHS = 40
 SELECT_DATA_SIZE = 1000
+
 
 ratings = 'ratings_5_10_binary.pkl'
 items_embeddings = 'books_embeddings.pkl'
@@ -25,7 +28,7 @@ recsys = models.RecSysBinary(INPUT_SIZE, OUTPUT_SIZE)
 criterion = nn.BCELoss()
 
 # Set Optimizer
-optimizer = torch.optim.Adam(recsys.parameters(), lr=LEARNING_RATE)
+optimizer = torch.optim.Adam(recsys.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 
 # Set LR_Scheduler
 lr_scheduler = StepLR(optimizer, step_size=50, gamma=0.1)
@@ -34,7 +37,8 @@ lr_scheduler = StepLR(optimizer, step_size=50, gamma=0.1)
 posneg_binary_run = Run(model=recsys, criterion=criterion, optimizer=optimizer, ratings_filename=ratings,
                         users_embeddings_filename=users_embeddings, items_embeddings_filename=items_embeddings,
                         tensorboard_name=tensorboard_name, wandb_name=wandb_name, select_data_size=SELECT_DATA_SIZE,
-                        lr=LEARNING_RATE, epochs=EPOCHS, lr_scheduler=lr_scheduler)
+                        lr=LEARNING_RATE, epochs=EPOCHS, weight_decay=WEIGHT_DECAY,
+                        lr_scheduler=lr_scheduler, batch_size=BATCH_SIZE)
 
 print('***** POSITIVE & NEGATIVE BINARY EXPERIMENT *****')
 posneg_binary_run.start()
