@@ -1,7 +1,9 @@
 import shutil
 import time
 import wandb
-
+import csv
+import json
+from datetime import datetime
 
 import torch
 from torch.utils.data import DataLoader
@@ -12,7 +14,7 @@ import data
 import experiment
 
 # Default Hyper-Parameters
-DATASET_PATH = '../../MyExperiments/datasets/goodreads/comics/'
+# DATASET_PATH = '../../MyExperiments/datasets/goodreads/comics/'
 TENSORBOARD_PATH = '../tensorboard/'
 EPOCHS = 5
 BATCH_SIZE = 4
@@ -27,11 +29,19 @@ class Run:
     def __init__(self, model, criterion, optimizer,
                  ratings_filename, users_embeddings_filename, items_embeddings_filename, tensorboard_name, wandb_name,
                  select_data_size,
-                 ds_path=DATASET_PATH,
+                 # ds_path=DATASET_PATH,
                  batch_size=BATCH_SIZE,
                  training_ratio=TRAINING_RATIO, test_ratio=TEST_RATIO,
                  epochs=EPOCHS, lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY,
                  lr_scheduler=None, dropout=DROPOUT):
+
+        # Read 'env' file to set environment parameters
+        machine, wandb_key, dataset_path = self.__read_env()
+
+        self.machine_name = machine
+        self.wandb_key = wandb_key
+        self.ds_path = dataset_path
+
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.model = model.to(self.device)
@@ -45,7 +55,7 @@ class Run:
         self.wandb_name = wandb_name
         self.data_size = select_data_size
 
-        self.ds_path = ds_path
+        # self.ds_path = ds_path
 
         self.batch_size = batch_size
 
@@ -58,13 +68,7 @@ class Run:
         self.lr_scheduler = lr_scheduler
         self.dropout = dropout
 
-    def __reset_tensorboard(self):
-        shutil.rmtree(TENSORBOARD_PATH + self.tensorboard_name, ignore_errors=True)
-        # Wait for 1 second in order to tensorboard related folder get deleted correctly
-        time.sleep(3)
-
-    def __set_wandb_ai(self):
-        hyper_params = dict(
+        self.hyper_params = dict(
             epochs=self.epochs,
             data_size=self.data_size,
             init_lr=self.learning_rate,
@@ -73,19 +77,49 @@ class Run:
             weight_decay=self.weight_decay,
             batch_size=self.batch_size,
             dropout=self.dropout,
+            device=self.device,
+            machine=self.machine_name,
             optimizer=self.optimizer.__class__.__name__,
             loss=self.criterion.__class__.__name__,
             lr_schedule=self.lr_scheduler.__class__.__name__,
             model=self.model.__class__.__name__
         )
 
+    def __read_env(self):
+        with open('../env.json') as file:
+            env_dict = json.load(file)
+            machine = env_dict['MACHINE']
+            wandb_key = env_dict['WANDB_KEY']
+            dataset_path = env_dict['DATASET_PATH']
+        return machine, wandb_key, dataset_path
+
+    def __reset_tensorboard(self):
+        shutil.rmtree(TENSORBOARD_PATH + self.tensorboard_name, ignore_errors=True)
+        # Wait for 1 second in order to tensorboard related folder get deleted correctly
+        time.sleep(3)
+
+    def __set_wandb_ai(self):
+        hp = self.hyper_params
+        wandb.login(key=self.wandb_key)
         wandb.init(
             # set the wandb project where this run will be logged
             project="HybridRecSys_BERT",
             name=self.wandb_name,
+
             # track hyper-parameters and run metadata
-            config=hyper_params
+            config=hp
         )
+
+    def __write_log(self, test_acc, train_loss, train_acc, val_loss, val_acc, runtime):
+        hp = self.hyper_params.copy()
+        hp.update([('TestAcc', test_acc), ('Trn_Acc', train_acc), ('Trn_loss', train_loss),
+                   ('val_Acc', val_acc), ('val_loss', val_loss), ('Runtime', runtime),
+                   ('experiment_type', self.wandb_name), ('date', datetime.now())])
+        header_names = hp.keys()
+        with open('log.csv', 'a', newline='') as file:
+            writer = csv.DictWriter(file, fieldnames=header_names)
+            # writer.writeheader()  # This line of code is necessary for the first time that the file is not exist
+            writer.writerow(hp)
 
     def start(self):
 
@@ -132,4 +166,6 @@ class Run:
                                               criterion, optimizer, self.device, writer, self.epochs,
                                               self.learning_rate)
 
-        my_experiment.run(self.lr_scheduler)
+        test_acc, train_loss, train_acc, val_loss, val_acc, runtime = my_experiment.run(self.lr_scheduler)
+
+        self.__write_log(test_acc, train_loss, train_acc, val_loss, val_acc, runtime)

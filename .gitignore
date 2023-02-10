@@ -4,4 +4,12 @@ __pycache__
 
 # Ignore Tensorboard folder
 tensorboard
+
+# Ignore WANDB folder
 /runs/wandb/
+
+# Ignore env.json file
+env.json
+
+# Ignore log file
+/runs/log.csv

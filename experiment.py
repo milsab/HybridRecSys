@@ -60,9 +60,9 @@ class Experiment:
 
             # Update Progress Bar
             if (epoch + 1) % 10 != 0:
-                progressbar_loop.set_description(f'Epoch [{epoch+1}/{self.epochs}]')
+                progressbar_loop.set_description(f'Epoch [{epoch + 1}/{self.epochs}]')
                 # Show the loss and accuracy of current batch in the progress bar
-                progressbar_loop.set_postfix(loss=loss.item(), acc=batch_corrects/train_data.batch_size)
+                progressbar_loop.set_postfix(loss=loss.item(), acc=batch_corrects / train_data.batch_size)
 
         # schedule the learning rate for the next epoch of training if it has set before
         if lr_scheduler:
@@ -167,7 +167,8 @@ class Experiment:
             # Validating
             val_loss, val_corrects = self.__validate(self.val_data)
 
-            train_loss, train_acc, val_loss, val_acc = self.__get_performance(train_loss, train_corrects, val_loss, val_corrects, epoch)
+            train_loss, train_acc, val_loss, val_acc = self.__get_performance(train_loss, train_corrects, val_loss,
+                                                                              val_corrects, epoch)
 
             last_train_loss, last_train_acc, last_val_loss, last_val_acc = train_loss, train_acc, val_loss, val_acc
 
@@ -178,6 +179,7 @@ class Experiment:
         wandb.finish()
 
         print('-------- Finished --------')
-        print('Runtime: ', time.strftime('%H:%M:%S', time.gmtime(time.time() - start_time)))
+        runtime = time.strftime('%H:%M:%S', time.gmtime(time.time() - start_time))
+        print('Runtime: ', runtime)
 
-        return test_acc, last_train_loss, last_train_acc, last_val_loss, last_val_acc
+        return test_acc, last_train_loss, last_train_acc, last_val_loss, last_val_acc, runtime
