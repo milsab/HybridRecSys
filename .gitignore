@@ -1,0 +1,7 @@
+# Ignore PyCharm related folders
+.idea
+__pycache__
+
+# Ignore Tensorboard folder
+tensorboard
+/runs/wandb/
