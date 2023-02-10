@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import time
 import wandb
+from tqdm import tqdm
 
 
 class Experiment:
@@ -19,11 +20,12 @@ class Experiment:
         self.lr = lr
         self.writer = writer
 
-    def __train(self, train_data, lr_scheduler=None):
+    def __train(self, train_data, epoch, lr_scheduler=None):
         self.model.train()
         train_loss = 0.0
         train_corrects = 0
-        for inputs, targets in train_data:
+        progressbar_loop = tqdm(enumerate(train_data), total=len(train_data), leave=True)
+        for batch_index, (inputs, targets) in progressbar_loop:
             inputs = inputs.to(self.device)
             targets = targets.to(self.device)
 
@@ -53,7 +55,14 @@ class Experiment:
             # Adding following code to calculate accuracy
             predictions, _ = torch.max(outputs, 1)
             predictions = torch.round(predictions)
-            train_corrects += (predictions == targets.squeeze(1)).sum().item()
+            batch_corrects = (predictions == targets.squeeze(1)).sum().item()
+            train_corrects += batch_corrects
+
+            # Update Progress Bar
+            if (epoch + 1) % 10 != 0:
+                progressbar_loop.set_description(f'Epoch [{epoch+1}/{self.epochs}]')
+                # Show the loss and accuracy of current batch in the progress bar
+                progressbar_loop.set_postfix(loss=loss.item(), acc=batch_corrects/train_data.batch_size)
 
         # schedule the learning rate for the next epoch of training if it has set before
         if lr_scheduler:
@@ -148,7 +157,7 @@ class Experiment:
         # Training Loop
         for epoch in range(self.epochs):
             # Training
-            train_loss, train_corrects = self.__train(self.train_data, lr_scheduler)
+            train_loss, train_corrects = self.__train(self.train_data, epoch, lr_scheduler)
 
             # Validating
             val_loss, val_corrects = self.__validate(self.val_data)

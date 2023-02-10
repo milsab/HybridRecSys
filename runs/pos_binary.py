@@ -7,9 +7,9 @@ from run import Run
 
 INPUT_SIZE = 768
 OUTPUT_SIZE = 1
-BATCH_SIZE = 4
+BATCH_SIZE = 40
 LEARNING_RATE = 0.001
-EPOCHS = 50
+EPOCHS = 1
 SELECT_DATA_SIZE = 1000
 WEIGHT_DECAY = 0
 DROPOUT = True
@@ -19,7 +19,7 @@ items_embeddings = 'books_embeddings.pkl'
 users_embeddings = 'users_embeddings_5_10_pos.pkl'
 
 tensorboard_name = 'pos_binary'
-wandb_name = 'pos_binary'
+wandb_name = None #'pos_binary'
 
 # Set Model
 recsys = models.RecSysBinary(INPUT_SIZE, OUTPUT_SIZE, dropout=DROPOUT)
