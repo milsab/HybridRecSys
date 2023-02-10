@@ -120,7 +120,9 @@ class Experiment:
                 wandb.log({'Test Acc': accuracy})
             print('Test Acc: %', 100 * accuracy)
 
-    def __display_results(self, train_loss, train_corrects, val_loss, val_corrects, epoch):
+        return accuracy
+
+    def __get_performance(self, train_loss, train_corrects, val_loss, val_corrects, epoch):
         avg_train_loss = train_loss / len(self.train_data)
         train_acc = (train_corrects / (len(self.train_data) * self.train_data.batch_size))
 
@@ -147,6 +149,8 @@ class Experiment:
             wandb.log({'TR. Loss': avg_train_loss, 'TR. Acc': train_acc,
                        'VAL. Loss': avg_val_loss, 'VAL. Acc': val_acc})
 
+        return avg_train_loss, train_acc, avg_val_loss, val_acc
+
     def run(self, lr_scheduler=None, verbose=True):
 
         start_time = time.time()
@@ -155,6 +159,7 @@ class Experiment:
         self.model = self.model.to(self.device)
 
         # Training Loop
+        last_train_loss, last_train_acc, last_val_loss, last_val_acc = 0.0, 0.0, 0.0, 0.0
         for epoch in range(self.epochs):
             # Training
             train_loss, train_corrects = self.__train(self.train_data, epoch, lr_scheduler)
@@ -162,13 +167,17 @@ class Experiment:
             # Validating
             val_loss, val_corrects = self.__validate(self.val_data)
 
-            self.__display_results(train_loss, train_corrects, val_loss, val_corrects, epoch)
+            train_loss, train_acc, val_loss, val_acc = self.__get_performance(train_loss, train_corrects, val_loss, val_corrects, epoch)
+
+            last_train_loss, last_train_acc, last_val_loss, last_val_acc = train_loss, train_acc, val_loss, val_acc
 
         # Testing
         print('-------- Testing --------')
-        self.__test(self.test_data)
+        test_acc = self.__test(self.test_data)
 
         wandb.finish()
 
         print('-------- Finished --------')
         print('Runtime: ', time.strftime('%H:%M:%S', time.gmtime(time.time() - start_time)))
+
+        return test_acc, last_train_loss, last_train_acc, last_val_loss, last_val_acc

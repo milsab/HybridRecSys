@@ -19,7 +19,7 @@ items_embeddings = 'books_embeddings.pkl'
 users_embeddings = 'users_embeddings_5_10_pos.pkl'
 
 tensorboard_name = 'pos_binary'
-wandb_name = None #'pos_binary'
+wandb_name = 'pos_binary'
 
 # Set Model
 recsys = models.RecSysBinary(INPUT_SIZE, OUTPUT_SIZE, dropout=DROPOUT)
