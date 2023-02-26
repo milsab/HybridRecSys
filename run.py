@@ -134,13 +134,16 @@ class Run:
         ratings = preprocessing.load_data(path=self.ds_path, filename=self.ratings_filename)
         ratings = ratings[:self.data_size]
 
-        # Split Data
-        x_train, y_train, x_val, y_val, x_test, y_test = preprocessing.split_data(ratings, self.training_ratio,
-                                                                                  self.test_ratio)
-
         # Load Embeddings
         users_embeddings = preprocessing.load_data(path=self.ds_path, filename=self.users_embeddings_filename)
         items_embeddings = preprocessing.load_data(path=self.ds_path, filename=self.items_embeddings_filename)
+
+        # Filter rating to only have users and items that we have embedding for them
+        ratings = preprocessing.filter_data(ratings, users_embeddings, items_embeddings)
+
+        # Split Data
+        x_train, y_train, x_val, y_val, x_test, y_test = preprocessing.split_data(ratings, self.training_ratio,
+                                                                                  self.test_ratio)
 
         # Create DataLoaders
         train_ds = data.GoodreadsDataset(x_train, y_train, users_embeddings, items_embeddings)

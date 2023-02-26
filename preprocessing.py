@@ -9,6 +9,19 @@ def load_data(path, filename):
         return pickle.load(f)
 
 
+# this function needs to find which user and which book has embedding. If there is not embedding for
+# a user or a book we should ignore the interaction that contains that particular user or book
+def filter_data(data, users_embeddings, items_embeddings):
+
+    # Filter out those users who do not have embedding
+    data = data[data.user_id.isin(users_embeddings.keys())]
+
+    # Filter out those book who do not have embedding
+    data = data[data.book_id.isin(items_embeddings.keys())]
+
+    return data
+
+
 # The following method split dataset to Train, Validation, and Test sets. First, It create a test set from the whole
 # dataset based on ts_size. Then, then remaining part of the dataset will be split in order to have tr_size of that
 # remaining part as training set and the reset will be considered as validation set.

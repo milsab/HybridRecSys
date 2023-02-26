@@ -10,6 +10,9 @@ def concat_embeddings(interactions, users_embeddings, items_embeddings):
         user_id = row[0]
         item_id = row[1]
 
+        # Check whether we have user embedding for the current user_id
+        if user_id not in users_embeddings:
+            continue
         user_embedding = users_embeddings[user_id]
         item_embedding = items_embeddings[item_id]['description']
 
