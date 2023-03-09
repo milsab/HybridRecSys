@@ -123,10 +123,10 @@ class Experiment:
                 n_correct += (predictions == targets).sum().item()
 
                 # Precision & Recall
-                precisions.append(metrics.precision_score(targets, predictions))
-                recalls.append(metrics.recall_score(targets, predictions))
-                sk_acc.append(metrics.accuracy_score(targets, predictions))   # sklearn accuracy
-                f1.append(metrics.f1_score(targets, predictions))
+                precisions.append(metrics.precision_score(targets.cpu().numpy(), predictions.cpu().numpy()))
+                recalls.append(metrics.recall_score(targets.cpu().numpy(), predictions.cpu().numpy()))
+                sk_acc.append(metrics.accuracy_score(targets.cpu().numpy(), predictions.cpu().numpy()))   # sklearn accuracy
+                f1.append(metrics.f1_score(targets.cpu().numpy(), predictions.cpu().numpy()))
 
             accuracy = n_correct / (len(test_data) * test_data.batch_size)
             precision_avg = statistics.mean(precisions)
