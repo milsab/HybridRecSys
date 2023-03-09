@@ -2,7 +2,9 @@ import torch
 import torch.nn as nn
 import time
 import wandb
+import statistics
 from tqdm import tqdm
+from sklearn import metrics
 
 
 class Experiment:
@@ -95,6 +97,11 @@ class Experiment:
         self.model.to(self.device)
         self.model.eval()
 
+        precisions = []
+        recalls = []
+        f1 = []
+        sk_acc = []
+
         with torch.no_grad():
             for inputs, targets in test_data:
                 inputs = inputs.to(self.device)
@@ -115,12 +122,33 @@ class Experiment:
 
                 n_correct += (predictions == targets).sum().item()
 
+                # Precision & Recall
+                precisions.append(metrics.precision_score(targets, predictions))
+                recalls.append(metrics.recall_score(targets, predictions))
+                sk_acc.append(metrics.accuracy_score(targets, predictions))   # sklearn accuracy
+                f1.append(metrics.f1_score(targets, predictions))
+
             accuracy = n_correct / (len(test_data) * test_data.batch_size)
-            if wandb.run is not None:
-                wandb.log({'Test Acc': accuracy})
+            precision_avg = statistics.mean(precisions)
+            recall_avg = statistics.mean(recalls)
+            f1_avg = statistics.mean(f1)
+            sk_acc_avg = statistics.mean(sk_acc)
+
             print('Test Acc: %', 100 * accuracy)
 
-        return accuracy
+            print('Precision: {} - Recall: {} - F1: {} - SK_ACC: {}'.format(
+                precision_avg,
+                recall_avg,
+                f1_avg,
+                sk_acc_avg
+            ))
+
+            if wandb.run is not None:
+                wandb.log({'Test Acc': accuracy,
+                           'Precision': precision_avg,
+                           'Recall': recall_avg})
+
+        return accuracy, precision_avg, recall_avg, f1_avg, sk_acc_avg
 
     def __get_performance(self, train_loss, train_corrects, val_loss, val_corrects, epoch):
         avg_train_loss = train_loss / len(self.train_data)
@@ -174,7 +202,7 @@ class Experiment:
 
         # Testing
         print('-------- Testing --------')
-        test_acc = self.__test(self.test_data)
+        test_acc, precision_avg, recall_avg, f1_avg, sk_acc_avg = self.__test(self.test_data)
 
         wandb.finish()
 
@@ -182,4 +210,5 @@ class Experiment:
         runtime = time.strftime('%H:%M:%S', time.gmtime(time.time() - start_time))
         print('Runtime: ', runtime)
 
-        return test_acc, last_train_loss, last_train_acc, last_val_loss, last_val_acc, runtime
+        return test_acc, last_train_loss, last_train_acc, last_val_loss, last_val_acc, runtime, \
+               precision_avg, recall_avg, f1_avg, sk_acc_avg

@@ -9,18 +9,19 @@ INPUT_SIZE = 768
 OUTPUT_SIZE = 1
 BATCH_SIZE = 4
 LEARNING_RATE = 0.001
-EPOCHS = 40
+EPOCHS = 20
 SELECT_DATA_SIZE = 1000
 WEIGHT_DECAY = 0.001
-DROPOUT = True
+DROPOUT = False
 
 ratings = 'ratings_5_10_binary.pkl'
 items_embeddings = 'books_embeddings.pkl'
 # users_embeddings = 'users_embeddings_5_10_pos.pkl'
-users_embeddings = 'users_embeddings_5_10_pos_ignore4.pkl'
+# users_embeddings = 'users_embeddings_5_10_pos_ignore4.pkl'
+users_embeddings = 'users_embeddings_5_10_pos_zscore.pkl'
 
 tensorboard_name = 'pos_binary'
-wandb_name = 'pos_binary_ignore4'
+wandb_name = 'pos_binary_zscore'
 
 # Set Model
 recsys = models.RecSysBinary(INPUT_SIZE, OUTPUT_SIZE, dropout=DROPOUT)

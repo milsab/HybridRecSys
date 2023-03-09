@@ -110,11 +110,12 @@ class Run:
             config=hp
         )
 
-    def __write_log(self, test_acc, train_loss, train_acc, val_loss, val_acc, runtime):
+    def __write_log(self, test_acc, train_loss, train_acc, val_loss, val_acc, runtime, precision, recall, f1, sk_acc):
         hp = self.hyper_params.copy()
         hp.update([('TestAcc', test_acc), ('Trn_Acc', train_acc), ('Trn_loss', train_loss),
                    ('val_Acc', val_acc), ('val_loss', val_loss), ('Runtime', runtime),
-                   ('experiment_type', self.wandb_name), ('date', datetime.now())])
+                   ('experiment_type', self.wandb_name), ('date', datetime.now()),
+                   ('precision', precision), ('recall', recall), ('f1', f1), ('sk_acc', sk_acc)])
         header_names = hp.keys()
         with open('log.csv', 'a', newline='') as file:
             writer = csv.DictWriter(file, fieldnames=header_names)
@@ -169,6 +170,6 @@ class Run:
                                               criterion, optimizer, self.device, writer, self.epochs,
                                               self.learning_rate)
 
-        test_acc, train_loss, train_acc, val_loss, val_acc, runtime = my_experiment.run(self.lr_scheduler)
+        test_acc, train_loss, train_acc, val_loss, val_acc, runtime, precision, recall, f1, sk_acc = my_experiment.run(self.lr_scheduler)
 
-        self.__write_log(test_acc, train_loss, train_acc, val_loss, val_acc, runtime)
+        self.__write_log(test_acc, train_loss, train_acc, val_loss, val_acc, runtime, precision, recall, f1, sk_acc)

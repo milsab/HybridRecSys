@@ -40,3 +40,30 @@ class RecSysMulti(RecSys):
         out = super().forward(x)
         # return self.linear3(out)
         return torch.softmax(self.linear3(out), dim=1)
+
+
+class BaselineCF(nn.Module):
+    def __init__(self, n_users, n_items, n_factors, bias=False):
+        super(BaselineCF, self).__init__()
+
+        self.user_factors = nn.Embedding(n_users, n_factors)
+        if bias:
+            self.user_bias = nn.Embedding(n_users, 1)
+
+        self.item_factors = nn.Embedding(n_items, n_factors)
+        if bias:
+            self.item_bias = nn.Embedding(n_items, 1)
+
+        self.bias = bias
+
+    def forward(self, data):
+        users = self.user_factors(data[:, 0])  # matrix with user_ids by user_factors
+        items = self.item_factors(data[:, 1])  # matrix with item_ids by item_factors
+
+        out = (users * items).sum(dim=1, keepdim=True)
+        if self.bias:
+            out += self.user_bias(data[:, 0]) + self.item_bias(data[:, 1])
+
+        return torch.sigmoid(out)
+
+
