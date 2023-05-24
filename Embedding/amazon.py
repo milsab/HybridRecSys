@@ -9,9 +9,9 @@ def get_embedding(model, x):
     return model.encode(x)
 
 
-def create_embedding(DATA_SIZE, BATCH_SIZE=1000):
+def create_embedding(DATA_SIZE, name, BATCH_SIZE=1000):
     # Load the DataFrame
-    with open('../../MyExperiments/datasets/amazon/book/books_5_10M_integratedReview.pkl', 'rb') as file:
+    with open('../../MyExperiments/datasets/amazon/book/split/hp_data.pkl', 'rb') as file:
         grp_df = pickle.load(file)
         if DATA_SIZE is not None:
             grp_df = grp_df.head(DATA_SIZE)
@@ -37,7 +37,7 @@ def create_embedding(DATA_SIZE, BATCH_SIZE=1000):
         batch['review'] = batch['review'].apply(lambda x: get_embedding(model, x))
 
         # Save the batch results to a separate file
-        batch_filename = f'../../MyExperiments/datasets/amazon/book/batch_results/batch_{i}.pkl'
+        batch_filename = f'../../MyExperiments/datasets/amazon/book/batch_results/{name}_batch_{i}.pkl'
         with open(batch_filename, 'wb') as batch_file:
             pickle.dump(batch, batch_file)
 
@@ -52,13 +52,14 @@ def create_embedding(DATA_SIZE, BATCH_SIZE=1000):
 
     # Load and combine the batch files
     for i in tqdm(range(total_batches)):
-        batch_filename = f'../../MyExperiments/datasets/amazon/book/batch_results/batch_{i}.pkl'
+        batch_filename = f'../../MyExperiments/datasets/amazon/book/batch_results/{name}_batch_{i}.pkl'
         with open(batch_filename, 'rb') as batch_file:
             batch = pickle.load(batch_file)
         combined_df = pd.concat([combined_df, batch], ignore_index=True)
 
     # Save the combined DataFrame
-    with open('../../MyExperiments/datasets/amazon/book/integratedReview_combined.pkl', 'wb') as file:
+    file_name = f'../../MyExperiments/datasets/amazon/book/{name}_integratedReview_combined.pkl'
+    with open(file_name, 'wb') as file:
         pickle.dump(combined_df, file)
 
     # Clean up the batch results directory
@@ -68,4 +69,4 @@ def create_embedding(DATA_SIZE, BATCH_SIZE=1000):
     # os.rmdir('batch_results')
 
 
-create_embedding(None, 10000)
+create_embedding(None, 'hp', 5000)
