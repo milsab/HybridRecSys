@@ -1,0 +1,55 @@
+# Problem: goodreads use book_id and user_id while amazon uses user and item. I should fix this
+---
+# Config
+EPOCHS: 40
+SELECT_DATA_SIZE: 256
+BATCH_SIZE: 256
+INPUT_SIZE: 768
+OUTPUT_SIZE: 1
+LEARNING_RATE: 0.001
+LR_SCHEDULER_STEP: 20
+LR_SCHEDULER_GAMMA: 0.1
+WEIGHT_DECAY: 0.001
+DROPOUT: false
+TRAINING_RATIO: 0.9
+TEST_RATIO: 0.1
+TENSORBOARD_PATH: ../tensorboard/
+
+---
+# Datasets
+#- data:
+    DATA_NAME: GDR
+    PATH: goodreads/comics/
+    RATING_FILE: ratings_5_10_binary.pkl
+    ITEMS_EMBEDDINGS: books_embeddings.pkl
+    experiments:
+      - NAME: GDR-P
+        USERS_EMBEDDINGS: users_embeddings_5_10_pos.pkl
+      - NAME: GDR-PN
+        USERS_EMBEDDINGS: users_embeddings_5_10_posneg.pkl
+      - NAME: GDR-P-IGNORE4
+        USERS_EMBEDDINGS: users_embeddings_5_10_pos_ignore4.pkl
+      - NAME: GDR-PN-IGNORE4
+        USERS_EMBEDDINGS: users_embeddings_5_10_posneg_ignore4.pkl
+      - NAME: GDR-P-ZSCORE
+        USERS_EMBEDDINGS: users_embeddings_5_10_pos_zscore.pkl
+      - NAME: GDR-PN-ZSCORE
+        USERS_EMBEDDINGS: users_embeddings_5_10_posneg_zscore.pkl
+- data:
+    DATA_NAME: AMZ
+    PATH: amazon/book/
+    RATING_FILE: ratings_10M_binary.pkl
+    ITEMS_EMBEDDINGS: items_embeddings.pkl
+    experiments:
+      - NAME: AMZ-P
+        USERS_EMBEDDINGS: users_embeddings_pos.pkl
+      - NAME: AMZ-PN
+        USERS_EMBEDDINGS: users_embeddings_posneg.pkl
+      - NAME: AMZ-P-IGNORE4
+        USERS_EMBEDDINGS: users_embeddings_pos_ignore4.pkl
+      - NAME: AMZ-PN-IGNORE4
+        USERS_EMBEDDINGS: users_embeddings_posneg_ignore4.pkl
+      - NAME: AMZ-P-ZSCORE
+        USERS_EMBEDDINGS: users_embeddings_pos_zscore.pkl
+      - NAME: AMZ-PN-ZSCORE
+        USERS_EMBEDDINGS: users_embeddings_posneg_zscore.pkl

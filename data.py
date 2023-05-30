@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import Dataset
 
 
-def concat_embeddings(interactions, users_embeddings, items_embeddings):
+def concat_embeddings(interactions, users_embeddings, items_embeddings, data_name):
     input_embeddings = []
 
     for row in interactions:
@@ -14,7 +14,11 @@ def concat_embeddings(interactions, users_embeddings, items_embeddings):
         if user_id not in users_embeddings:
             continue
         user_embedding = users_embeddings[user_id]
-        item_embedding = items_embeddings[item_id]['description']
+
+        if data_name == 'GDR':
+            item_embedding = items_embeddings[item_id]['description']
+        if data_name == 'AMZ':
+            item_embedding = items_embeddings[item_id]['review']
 
         embedding = np.concatenate((user_embedding, item_embedding), axis=None)
 
@@ -25,11 +29,11 @@ def concat_embeddings(interactions, users_embeddings, items_embeddings):
 
 class GoodreadsDataset(Dataset):
 
-    def __init__(self, inputs, targets, users_embeddings, items_embeddings):
+    def __init__(self, inputs, targets, users_embeddings, items_embeddings, data_name):
         inputs = inputs.to_numpy()
         targets = targets.to_numpy()
 
-        embeddings = concat_embeddings(inputs, users_embeddings, items_embeddings)
+        embeddings = concat_embeddings(inputs, users_embeddings, items_embeddings, data_name)
 
         self.x = torch.from_numpy(embeddings.astype(np.float32))
         self.x.requires_grad_(True)

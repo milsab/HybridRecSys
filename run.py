@@ -29,6 +29,7 @@ class Run:
     def __init__(self, model, criterion, optimizer,
                  ratings_filename, users_embeddings_filename, items_embeddings_filename, tensorboard_name, wandb_name,
                  select_data_size,
+                 data_name,
                  # ds_path=DATASET_PATH,
                  batch_size=BATCH_SIZE,
                  training_ratio=TRAINING_RATIO, test_ratio=TEST_RATIO,
@@ -54,6 +55,7 @@ class Run:
         self.tensorboard_name = tensorboard_name
         self.wandb_name = wandb_name
         self.data_size = select_data_size
+        self.data_name = data_name
 
         # self.ds_path = ds_path
 
@@ -86,7 +88,8 @@ class Run:
         )
 
     def __read_env(self):
-        with open('../env.json') as file:
+        #with open('../env.json') as file:
+        with open('env.json') as file:
             env_dict = json.load(file)
             machine = env_dict['MACHINE']
             wandb_key = env_dict['WANDB_KEY']
@@ -140,20 +143,20 @@ class Run:
         items_embeddings = preprocessing.load_data(path=self.ds_path, filename=self.items_embeddings_filename)
 
         # Filter rating to only have users and items that we have embedding for them
-        ratings = preprocessing.filter_data(ratings, users_embeddings, items_embeddings)
+        ratings = preprocessing.filter_data(ratings, users_embeddings, items_embeddings, data_name=self.data_name)
 
         # Split Data
-        x_train, y_train, x_val, y_val, x_test, y_test = preprocessing.split_data(ratings, self.training_ratio,
+        x_train, y_train, x_val, y_val, x_test, y_test = preprocessing.split_data(ratings, self.data_name, self.training_ratio,
                                                                                   self.test_ratio)
 
         # Create DataLoaders
-        train_ds = data.GoodreadsDataset(x_train, y_train, users_embeddings, items_embeddings)
+        train_ds = data.GoodreadsDataset(x_train, y_train, users_embeddings, items_embeddings, data_name=self.data_name)
         train_loader = DataLoader(dataset=train_ds, batch_size=self.batch_size, shuffle=True)
 
-        val_ds = data.GoodreadsDataset(x_val, y_val, users_embeddings, items_embeddings)
+        val_ds = data.GoodreadsDataset(x_val, y_val, users_embeddings, items_embeddings, data_name=self.data_name)
         val_loader = DataLoader(dataset=val_ds, batch_size=self.batch_size, shuffle=True)
 
-        test_ds = data.GoodreadsDataset(x_test, y_test, users_embeddings, items_embeddings)
+        test_ds = data.GoodreadsDataset(x_test, y_test, users_embeddings, items_embeddings, data_name=self.data_name)
         test_loader = DataLoader(dataset=test_ds, batch_size=self.batch_size)
 
         # Set Criterion
