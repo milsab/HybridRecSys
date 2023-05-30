@@ -17,7 +17,7 @@ TENSORBOARD_PATH: ../tensorboard/
 
 ---
 # Datasets
-#- data:
+- data:
     DATA_NAME: GDR
     PATH: goodreads/comics/
     RATING_FILE: ratings_5_10_binary.pkl
