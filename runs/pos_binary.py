@@ -7,21 +7,21 @@ from run import Run
 
 INPUT_SIZE = 768
 OUTPUT_SIZE = 1
-BATCH_SIZE = 4
+BATCH_SIZE = 256
 LEARNING_RATE = 0.001
-EPOCHS = 20
-SELECT_DATA_SIZE = 1000
+EPOCHS = 40
+SELECT_DATA_SIZE = 1024
 WEIGHT_DECAY = 0.001
 DROPOUT = False
 
 ratings = 'ratings_5_10_binary.pkl'
 items_embeddings = 'books_embeddings.pkl'
-# users_embeddings = 'users_embeddings_5_10_pos.pkl'
+users_embeddings = 'users_embeddings_5_10_pos.pkl'
 # users_embeddings = 'users_embeddings_5_10_pos_ignore4.pkl'
-users_embeddings = 'users_embeddings_5_10_pos_zscore.pkl'
+# users_embeddings = 'users_embeddings_5_10_pos_zscore.pkl'
 
 tensorboard_name = 'pos_binary'
-wandb_name = 'pos_binary_zscore'
+wandb_name = 'pos_binary'
 
 # Set Model
 recsys = models.RecSysBinary(INPUT_SIZE, OUTPUT_SIZE, dropout=DROPOUT)
@@ -33,7 +33,7 @@ criterion = nn.BCELoss()
 optimizer = torch.optim.Adam(recsys.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 
 # Set LR_Scheduler
-lr_scheduler = StepLR(optimizer, step_size=50, gamma=0.1)
+lr_scheduler = StepLR(optimizer, step_size=20, gamma=0.1)
 
 pos_binary_run = Run(model=recsys, criterion=criterion, optimizer=optimizer, ratings_filename=ratings,
                      users_embeddings_filename=users_embeddings, items_embeddings_filename=items_embeddings,

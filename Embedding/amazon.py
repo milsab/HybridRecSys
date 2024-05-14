@@ -9,6 +9,7 @@ def get_embedding(model, x):
     return model.encode(x)
 
 
+# Create items embeddings for Amazon Product Review Dataset
 def create_embedding(DATA_SIZE, name, BATCH_SIZE=1000):
     # Load the DataFrame
     with open('../../MyExperiments/datasets/amazon/book/split/hp_data.pkl', 'rb') as file:
@@ -55,7 +56,7 @@ def create_embedding(DATA_SIZE, name, BATCH_SIZE=1000):
         batch_filename = f'../../MyExperiments/datasets/amazon/book/batch_results/{name}_batch_{i}.pkl'
         with open(batch_filename, 'rb') as batch_file:
             batch = pickle.load(batch_file)
-        combined_df = pd.concat([combined_df, batch], ignore_index=True)
+        combined_df = pd.concat([combined_df, batch], ignore_index=False)
 
     # Save the combined DataFrame
     file_name = f'../../MyExperiments/datasets/amazon/book/{name}_integratedReview_combined.pkl'
@@ -69,4 +70,4 @@ def create_embedding(DATA_SIZE, name, BATCH_SIZE=1000):
     # os.rmdir('batch_results')
 
 
-create_embedding(None, 'hp', 5000)
+create_embedding(None, 'hp_2', 5000)
