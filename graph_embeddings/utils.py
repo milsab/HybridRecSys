@@ -48,11 +48,15 @@ def update_env():
         json.dump(env_dict, file, indent=4)
 
 
-def aux_load():
-    df = pd.read_csv('datasets/data_started.csv')
-    df = df[['user_id', 'book_id', 'rating', 'started_at']]
-    df.rename(columns={'book_id': 'item_id', 'started_at': 'timestamp'}, inplace=True)
-    df.to_csv('datasets/goodreads_full.csv', index=False)
+def get_sparsity(df):
+    num_of_users = df.user_id.nunique()
+    num_of_items = df.item_id.nunique()
 
-    return df
+    total_elements_in_matrix = num_of_users * num_of_items
+    num_of_non_zero_elements = df.shape[0]
+    num_of_zero_elements = total_elements_in_matrix - num_of_non_zero_elements
+
+    sparsity = num_of_zero_elements / total_elements_in_matrix
+
+    return sparsity * 100
 

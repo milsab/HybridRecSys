@@ -1,11 +1,11 @@
 import numpy as np
 
 
-def evaluate_hits(test_set, recommendations):
+def evaluate_hits_0(test_set, recommendations):
     hits = 0
     total = 0
 
-    for index, row in test_set.iterrows():
+    for index, row in test_set.iterrows(): # ==> iterate over recom list
         user_id = row['user_id']
         item_id = row['item_id']
         if user_id in recommendations and item_id in recommendations[user_id]:
@@ -13,6 +13,21 @@ def evaluate_hits(test_set, recommendations):
         total += 1
     hit_ratio = hits / total
 
+    return hit_ratio
+
+
+def evaluate_hits(test_set, recommendations):
+    hits = 0
+
+    for user_id in recommendations:
+        recommended_items = recommendations[user_id]
+        actual_items = test_set[test_set['user_id'] == user_id]['item_id'].tolist()
+
+        overlap = set(recommended_items) & set(actual_items)
+        if overlap:
+            hits += 1
+
+    hit_ratio = hits / len(recommendations)
     return hit_ratio
 
 
