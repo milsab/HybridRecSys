@@ -18,7 +18,7 @@ exp_num = 's' + str(
     exp_num) if machine_name == 'Server-GPU' else exp_num  # add "s" in the run-name if it runs on Server
 
 # Hyperparameters
-EPOCHS = 50
+EPOCHS = 30
 EMBEDDING_SIZE = 64
 INPUT_SIZE = 64  # Number of features for each Node (Users & Items)
 HIDDEN_SIZE = 128
@@ -28,12 +28,14 @@ DATASET_SAMPLE_RATIO = 1
 ATTENTION_HEAD = 4
 DROPOUT = 0
 EXPERIMENT_NAME = 'GRAPH_EMBEDDINGS'
-DATASET_NAME = 'GR'
+DATASET_NAME = 'KR'
 DATASET_PATH = 'datasets/'
 DATASET_FILE = f'{DATASET_PATH}kairec_big_core5.csv' if DATASET_NAME == 'KR' else f'{DATASET_PATH}goodreads_core20.csv'
-TEMPORAL = False
-RUN_NAME = f'{exp_num}_{DATASET_NAME}_GAT_TEMPORAL_{EMBEDDING_SIZE}' if TEMPORAL \
-    else f'{exp_num}_{DATASET_NAME}_GAT_{EMBEDDING_SIZE}'
+CONVERT_TO_TIMESTAMP = True if DATASET_NAME == 'GR' else False
+TEMPORAL = True
+SPLIT_MANNER = 'random'
+RUN_NAME = f'{exp_num}_{DATASET_NAME}_GAT_TEMPORAL_{EMBEDDING_SIZE}_spl_{SPLIT_MANNER}' if TEMPORAL \
+    else f'{exp_num}_{DATASET_NAME}_GAT_{EMBEDDING_SIZE}_spl_{SPLIT_MANNER}'
 
 start_time = time.time()  # Record the start time
 
@@ -41,9 +43,11 @@ mlflow.set_tracking_uri('http://localhost:5000/')
 mlflow.set_experiment(EXPERIMENT_NAME)
 
 mlflow.start_run(run_name=RUN_NAME)
+print(RUN_NAME)
 
 # Get data
-train_df, test_df = preprocessing.split_data(DATASET_FILE, DATASET_SAMPLE_RATIO, 0.2)
+train_df, test_df = preprocessing.split_data(DATASET_FILE, DATASET_SAMPLE_RATIO, split_manner=SPLIT_MANNER,
+                                             test_ratio=0.2, convert_to_timestamp=CONVERT_TO_TIMESTAMP)
 bi_graph = preprocessing.create_bipartite_graph(train_df, temporal=TEMPORAL)
 
 # Set WANDB
@@ -60,7 +64,8 @@ hyper_params = dict(
     machine=machine_name,
     clusters=N_CLUSTERS,
     model='GAE',
-    epochs=EPOCHS
+    epochs=EPOCHS,
+    split=SPLIT_MANNER
     # model=model.__class__.__name__
 )
 
@@ -146,6 +151,7 @@ mlflow.log_param('HIDDEN_SIZE', HIDDEN_SIZE)
 mlflow.log_param('OUTPUT_SIZE', OUTPUT_SIZE)
 mlflow.log_param('K-KMeans', KMeans)
 mlflow.log_param('DATASET_SAMPLE_RATIO', DATASET_SAMPLE_RATIO)
+mlflow.log_param('SPLIT', SPLIT_MANNER)
 
 end_time = time.time()  # Record the end time
 execution_time = end_time - start_time

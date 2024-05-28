@@ -121,7 +121,7 @@ def get_data_timestamp_2(dataset_path, dataset_sample_ration):
     return train_df, test_df, user_ids, item_ids, bi_graph
 
 
-def split_data(path, sample_ratio, test_ratio):
+def split_data(path, sample_ratio, test_ratio, split_manner, convert_to_timestamp=False):
     df = load_dataset(path, sample_ratio)
 
     # Exclude users with only one interaction
@@ -137,26 +137,42 @@ def split_data(path, sample_ratio, test_ratio):
     df.item_id = item_ids
 
     # Convert timestamps to UNIX time
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    df['timestamp'] = df['timestamp'].astype('int64') // 1e9
+    if convert_to_timestamp:
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        df['timestamp'] = df['timestamp'].astype('int64') // 1e9
 
     # Normalize the UNIX timestamps to use as edge attributes
     df['edge_attr'] = (df['timestamp'] - df['timestamp'].min()) / (
             df['timestamp'].max() - df['timestamp'].min())
 
-    # Function to split data for a single user
-    def split_user_data(user_df):
+    # Function to split data for a single user with random selection
+    def split_user_data_random(user_df):
         n_items = len(user_df)
         n_test = math.ceil(n_items * test_ratio)
         test_indices = np.random.choice(user_df.index, size=n_test, replace=False)
         train_indices = list(set(user_df.index) - set(test_indices))
         return user_df.loc[train_indices], user_df.loc[test_indices]
 
+    # Function to split data for a single user with temporal manner
+    def split_user_data_temporal(user_df):
+        user_df = user_df.sort_values('timestamp')
+        n_items = len(user_df)
+        n_test = math.ceil(n_items * test_ratio)
+        n_train = n_items - n_test
+        train_user = user_df.head(n_train)
+        test_user = user_df.tail(n_test)
+        return train_user, test_user
+
     # Group by user and apply splitting function
     train_list = []
     test_list = []
     for user_id, group in df.groupby('user_id'):
-        train_user, test_user = split_user_data(group)
+        if split_manner == 'random':
+            train_user, test_user = split_user_data_random(group)
+        elif split_manner == 'temporal':
+            train_user, test_user = split_user_data_temporal(group)
+        else:
+            raise '"split_manner" not recognized.'
         train_list.append(train_user)
         test_list.append(test_user)
 
