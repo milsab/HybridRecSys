@@ -130,10 +130,10 @@ def split_data(path, sample_ratio, test_ratio, split_manner, convert_to_timestam
     df = df[df['user_id'].isin(valid_users)]
 
     # Map user IDs to unique integer indices starts from zero
-    user_ids = pd.factorize(df.user_id)[0]
-    df.user_id = user_ids
+    new_user_ids = pd.factorize(df.user_id)[0]
+    df.user_id = new_user_ids
     # Map item IDs to unique integer indices starts from the last user_id
-    item_ids = pd.factorize(df.item_id)[0] + len(set(user_ids))
+    item_ids = pd.factorize(df.item_id)[0] + len(set(new_user_ids))
     df.item_id = item_ids
 
     # Convert timestamps to UNIX time

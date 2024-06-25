@@ -36,7 +36,10 @@ def read_env():
         machine = env_dict['MACHINE']
         wandb_key = env_dict['WANDB_KEY']
         dataset_path = env_dict['DATASET_PATH']
-    return exp_num, machine, wandb_key, dataset_path
+        mlflow_tracking_uri = env_dict['MLFLOW_TRACKING_URI']
+        dagshub_owner = env_dict['DAGSHUB_OWNER']
+        dagshub_repo = env_dict['DAGSHUB_REPO_NAME']
+    return exp_num, machine, wandb_key, dataset_path, mlflow_tracking_uri, dagshub_owner, dagshub_repo
 
 
 def update_env():
