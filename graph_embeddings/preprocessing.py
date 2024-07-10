@@ -6,7 +6,6 @@ import torch
 from torch_geometric.data import Data
 
 
-# Load dataset
 def load_dataset(path, sample_ratio):
 
     df = pd.read_csv(path)
@@ -14,111 +13,6 @@ def load_dataset(path, sample_ratio):
     df = df.sample(frac=sample_ratio)  # sampling the dataset
 
     return df
-
-
-def load_train_test(path, sample_ratio, sort=False, n=1):
-    """
-    Split data into training and test sets based on the last n interactions per user.
-    :param sort: if true, we sort the dataset based on timestamp first and then split accordingly
-    :param path: path to the dataset file
-    :param sample_ratio:
-    :param n: number of hold out interactions per user
-    :return:
-    """
-    df = pd.read_csv(path)
-    df = df[['user_id', 'item_id', 'rating', 'timestamp']]
-    df = df.sample(frac=sample_ratio)  # sampling the dataset
-
-    # Map user IDs to unique integer indices starts from zero
-    user_ids = pd.factorize(df.user_id)[0]
-    df.user_id = user_ids
-    # Map item IDs to unique integer indices starts from the last user_id
-    item_ids = pd.factorize(df.item_id)[0] + len(set(user_ids))
-    df.item_id = item_ids
-
-    # Convert timestamps to UNIX time
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    df['timestamp'] = df['timestamp'].astype('int64') // 1e9
-
-    # Normalize the UNIX timestamps to use as edge attributes
-    df['edge_attr'] = (df['timestamp'] - df['timestamp'].min()) / (
-            df['timestamp'].max() - df['timestamp'].min())
-
-    if sort:
-        df = df.sort_values(by=['user_id', 'timestamp'])
-
-    test_idx = df.groupby('user_id').tail(n).index
-    train_df = df.drop(test_idx)
-    test_df = df.loc[test_idx]
-
-    return train_df, test_df
-
-
-def get_users_items(df):
-    # Map user IDs to unique integer indices starts from zero
-    user_ids = pd.factorize(df.user_id)[0]
-    # Map item IDs to unique integer indices starts from the last user_id
-    item_ids = pd.factorize(df.item_id)[0] + len(set(user_ids))
-
-    return user_ids, item_ids
-
-
-def create_bipartite_graph_timestamp(df, user_ids, item_ids):
-    # Create the edge index tensor
-    edge_index = torch.tensor([user_ids, item_ids], dtype=torch.long)
-
-    # Create edge weight tensor
-    edge_attr = torch.tensor(df['edge_weight'].values, dtype=torch.float)
-
-    # Create a simple bipartite graph dataset
-    bi_graph = Data(edge_index=edge_index, edge_attr=edge_attr)
-
-    return bi_graph
-
-
-def get_data(dataset_path, dataset_sample_ration):
-    df = load_dataset(dataset_path, dataset_sample_ration)
-    user_ids, item_ids = get_users_items(df)
-    bi_graph = create_bipartite_graph(user_ids, item_ids)
-
-    return df, user_ids, item_ids, bi_graph
-
-
-def get_data_timestamp(dataset_path, dataset_sample_ration):
-    df = load_dataset(dataset_path, dataset_sample_ration)
-    # Convert timestamps to UNIX time
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    df['unix_timestamp'] = df['timestamp'].astype('int64') // 1e9
-
-    # Normalize the UNIX timestamps to use as edge weights, if necessary
-    # It's often a good idea to scale these to a [0, 1] range or standardize them
-    df['edge_weight'] = (df['unix_timestamp'] - df['unix_timestamp'].min()) / (
-                df['unix_timestamp'].max() - df['unix_timestamp'].min())
-
-    user_ids, item_ids = get_users_items(df)
-
-    bi_graph = create_bipartite_graph_timestamp(df, user_ids, item_ids)
-
-    return df, user_ids, item_ids, bi_graph
-
-
-def get_data_timestamp_2(dataset_path, dataset_sample_ration):
-    train_df, test_df = load_train_test(dataset_path, dataset_sample_ration)
-
-    # Convert timestamps to UNIX time
-    train_df['timestamp'] = pd.to_datetime(train_df['timestamp'])
-    train_df['unix_timestamp'] = train_df['timestamp'].astype('int64') // 1e9
-
-    # Normalize the UNIX timestamps to use as edge weights, if necessary
-    # It's often a good idea to scale these to a [0, 1] range or standardize them
-    train_df['edge_weight'] = (train_df['unix_timestamp'] - train_df['unix_timestamp'].min()) / (
-            train_df['unix_timestamp'].max() - train_df['unix_timestamp'].min())
-
-    user_ids, item_ids = get_users_items(train_df)
-
-    bi_graph = create_bipartite_graph_timestamp(train_df, user_ids, item_ids)
-
-    return train_df, test_df, user_ids, item_ids, bi_graph
 
 
 def split_data(path, sample_ratio, test_ratio, split_manner, convert_to_timestamp=False):
@@ -206,3 +100,24 @@ def create_bipartite_graph(df, temporal):
         bi_graph = Data(x=None, edge_index=edge_index)
 
     return bi_graph
+
+
+def create_snapshots(path, sample_ratio, timeframe, filename_prefix):
+    df = load_dataset(path, sample_ratio)
+
+    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
+
+    # Group data by a specified timeframe (D: Daily, W: Weekly, M: Monthly, Y: Yearly)
+    grouped = df.groupby(df['timestamp'].dt.to_period(timeframe))
+
+    #  Create cumulative groups and save each snapshot to a CSV file
+    cumulative_df = pd.DataFrame()
+
+    for i, (period, group) in enumerate(grouped, start=1):
+        cumulative_df = pd.concat([cumulative_df, group])
+        filename = f'{filename_prefix}_{i}.csv'
+        cumulative_df.to_csv(f'datasets/snapshots/{filename}', index=False)
+        print(f"Saved {filename}")
+
+
+# create_snapshots('datasets/kairec_big_core5.csv', sample_ratio=1, timeframe='W', filename_prefix='KR')

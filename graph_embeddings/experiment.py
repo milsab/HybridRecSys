@@ -14,11 +14,6 @@ def initialize_embedding_random(item_ids, embedding_dim):
     return x
 
 
-def initialize_embedding_timestamp():
-    return 0
-
-
-# Training Loop
 def train(data, model, optimizer):
     model.train()
     optimizer.zero_grad()
@@ -55,13 +50,13 @@ def run_graph_autoencoder(bi_graph, in_channels, out_channel, hidden_size, num_u
     data = bi_graph.to(device)
     model = model.to(device)
 
+    # Training Loop
     for epoch in range(epochs):
         loss = train(data, model, optimizer)
         print(f'Epoch {epoch + 1}, Loss: {loss:.4f}')
         wandb.log({'Train Loss': loss})
         # embeddings_after_each_epoch = model.encode(data.x, data.edge_index)
         # get_evaluation(data, embeddings_after_each_epoch, user_indices, item_indices)
-
 
     # Get embeddings
     model.eval()
