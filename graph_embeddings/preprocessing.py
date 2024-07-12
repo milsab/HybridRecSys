@@ -102,22 +102,34 @@ def create_bipartite_graph(df, temporal):
     return bi_graph
 
 
-def create_snapshots(path, sample_ratio, timeframe, filename_prefix):
-    df = load_dataset(path, sample_ratio)
+def create_snapshots(path, sample_ratio, timeframe, dataset_prefix):
 
-    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
+    train_df, test_df = split_data(path, sample_ratio, split_manner='temporal',
+                                   test_ratio=0.2, convert_to_timestamp=False)
+
+    train_df['timestamp'] = pd.to_datetime(train_df['timestamp'], unit='s')
 
     # Group data by a specified timeframe (D: Daily, W: Weekly, M: Monthly, Y: Yearly)
-    grouped = df.groupby(df['timestamp'].dt.to_period(timeframe))
+    grouped = train_df.groupby(train_df['timestamp'].dt.to_period(timeframe))
 
     #  Create cumulative groups and save each snapshot to a CSV file
     cumulative_df = pd.DataFrame()
 
     for i, (period, group) in enumerate(grouped, start=1):
         cumulative_df = pd.concat([cumulative_df, group])
-        filename = f'{filename_prefix}_{i}.csv'
-        cumulative_df.to_csv(f'datasets/snapshots/{filename}', index=False)
-        print(f"Saved {filename}")
+        cumulative_df = cumulative_df[['user_id', 'item_id']]
+        filename = f'{i}.csv'
+        cumulative_df.to_csv(f'datasets/snapshots/{dataset_prefix}/{filename}', index=False)
+        print(f"Saved {dataset_prefix}-{filename}")
 
 
-# create_snapshots('datasets/kairec_big_core5.csv', sample_ratio=1, timeframe='W', filename_prefix='KR')
+def get_users_static_features():
+    return pd.read_csv('datasets/KR_user_features.csv')
+
+
+def get_items_static_features():
+    return pd.read_csv('datasets/KR_item_features.csv')
+
+
+# create_snapshots('datasets/kairec_big_core5.csv', sample_ratio=1, timeframe='W', dataset_prefix='KR')
+

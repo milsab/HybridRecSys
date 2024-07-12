@@ -1,7 +1,8 @@
 import numpy as np
+import pandas as pd
 import time
+import os
 import mlflow
-import dagshub
 import wandb
 import utils
 import models
@@ -16,98 +17,71 @@ from sklearn.cluster import KMeans
 # Record the start time
 start_time = time.time()
 
-# ----------------------------------------- Load .env file -----------------------------------------
+# ----------------------------------------- Load env file -----------------------------------------
 exp_num, machine_name, wandb_key, dataset_path, mlflow_tracking_uri, dagshub_owner, dagshub_repo = utils.read_env()
 
 exp_num = 's' + str(
     exp_num) if machine_name == 'Server-GPU' else exp_num  # add "s" in the run-name if it runs on Server
 
-# ----------------------------------------- Hyperparameters -----------------------------------------
-EPOCHS = 30
-EMBEDDING_SIZE = 64
-INPUT_SIZE = 64  # Number of features for each Node (Users & Items)
-HIDDEN_SIZE = 128
-OUTPUT_SIZE = 64  # Embedding Size
-N_CLUSTERS = 5  # Number of Clusters for K-MEAN
-DATASET_SAMPLE_RATIO = 0.001
-ATTENTION_HEAD = 4
-DROPOUT = 0
-EXPERIMENT_NAME = 'GRAPH_EMBEDDINGS'
 
-DATASET_NAME = 'GR'
-DATASET_PATH = dataset_path
-DATASET_FILE = f'{DATASET_PATH}kairec_big_core5.csv' if DATASET_NAME == 'KR' else f'{DATASET_PATH}goodreads_core50.csv'
-CONVERT_TO_TIMESTAMP = True if DATASET_NAME == 'GR' else False
+# ----------------------------------------- Load config file -----------------------------------------
+configs = utils.load_config()
 
-TEMPORAL = True  # if 'True' it means that we add timestamp as edge features
-SPLIT_MANNER = 'random'  # if 'temporal' then split is based on temporal, if 'random' then it is based on random split
+DATASET_FILE = f'{dataset_path}kairec_big_core5.csv' if configs.dataset_name == 'KR' else f'{dataset_path}goodreads_core50.csv'
+CONVERT_TO_TIMESTAMP = True if configs.dataset_name == 'GR' else False
 
-RUN_NAME = f'{exp_num}_{DATASET_NAME}_GAT_TEMPORAL_{EMBEDDING_SIZE}_spl_{SPLIT_MANNER}' if TEMPORAL \
-    else f'{exp_num}_{DATASET_NAME}_GAT_{EMBEDDING_SIZE}_spl_{SPLIT_MANNER}'
-
+RUN_NAME = f'{exp_num}_{configs.dataset_name}_GAT_TEMPORAL_{configs.embedding_size}_spl_{configs.split_manner}' if configs.temporal \
+    else f'{exp_num}_{configs.dataset_name}_GAT_{configs.embedding_size}_spl_{configs.split_manner}'
 print(RUN_NAME)
 
+# ----------------------------------------- Set MLFlow and WANDB -----------------------------------------
+utils.set_mlflow(machine_name, RUN_NAME, mlflow_tracking_uri, dagshub_owner, dagshub_repo, DATASET_FILE)
+utils.set_wandb(wandb_key, RUN_NAME, DATASET_FILE, machine_name)
+
 # -------------------------------- Load Data & Create Bipartite Graph --------------------------------
-train_df, test_df = preprocessing.split_data(DATASET_FILE, DATASET_SAMPLE_RATIO, split_manner=SPLIT_MANNER,
+train_df, test_df = preprocessing.split_data(DATASET_FILE, configs.dataset_sample_ration, split_manner=configs.split_manner,
                                              test_ratio=0.2, convert_to_timestamp=CONVERT_TO_TIMESTAMP)
-bi_graph = preprocessing.create_bipartite_graph(train_df, temporal=TEMPORAL)
 
-
-# -------------------------------- MLFlow, DagsHub, and WANDB Setups --------------------------------
-
-# Set DagsHub & MLFlow
-dagshub.init(dagshub_repo, dagshub_owner, mlflow=True)
-mlflow.set_tracking_uri(mlflow_tracking_uri)
-# mlflow.set_tracking_uri('http://localhost:5000/')
-mlflow.set_experiment(EXPERIMENT_NAME)
-mlflow.start_run(run_name=RUN_NAME)
-
-mlflow.set_tag('type', f'{RUN_NAME}')
-mlflow.set_tag('DS File', DATASET_FILE)
 mlflow.set_tag('Data Size', train_df.shape[0])
 mlflow.set_tag('No. of Users', train_df.user_id.nunique())
 mlflow.set_tag('No. of Items', train_df.item_id.nunique())
 
-mlflow.log_param('EPOCHS', EPOCHS)
-mlflow.log_param('EMBEDDING_SIZE', EMBEDDING_SIZE)
-mlflow.log_param('INPUT_SIZE', INPUT_SIZE)
-mlflow.log_param('HIDDEN_SIZE', HIDDEN_SIZE)
-mlflow.log_param('OUTPUT_SIZE', OUTPUT_SIZE)
-# mlflow.log_param('K-KMeans', KMeans)
-mlflow.log_param('DATASET_SAMPLE_RATIO', DATASET_SAMPLE_RATIO)
-mlflow.log_param('SPLIT', SPLIT_MANNER)
-
-# Set WANDB
-hyper_params = dict(
-    DS_file=DATASET_FILE,
-    DS_size=train_df.shape[0],
-    users=train_df.user_id.nunique(),
-    items=train_df.item_id.nunique(),
-    embedding_size=EMBEDDING_SIZE,
-    in_dim=INPUT_SIZE,
-    hid_dim=HIDDEN_SIZE,
-    out_dim=OUTPUT_SIZE,
-    att_head=ATTENTION_HEAD,
-    machine=machine_name,
-    clusters=N_CLUSTERS,
-    model='GAE',
-    epochs=EPOCHS,
-    split=SPLIT_MANNER
-    # model=model.__class__.__name__
-)
-
-utils.set_wandb(wandb_key, RUN_NAME, hyper_params)
-
-
 # ----------------------------------------- Run the Model -----------------------------------------
-user_indices = np.arange(start=0, stop=len(set(train_df.user_id)), step=1)
-item_indices = np.arange(start=len(set(train_df.user_id)), stop=len(set(train_df.user_id)) + len(set(train_df.item_id)),
-                         step=1)
 
-model, embeddings = experiment.run_graph_autoencoder(bi_graph, EMBEDDING_SIZE, OUTPUT_SIZE, HIDDEN_SIZE,
-                                                     train_df.user_id.nunique(), train_df.item_id.nunique(),
-                                                     user_indices, item_indices,
-                                                     head=ATTENTION_HEAD, dropout=DROPOUT, epochs=EPOCHS)
+snapshots_dir = 'datasets/snapshots/KR'
+embeddings = None
+
+import re
+
+
+# Use a regular expression to extract the numeric part of the filename and converts it to an integer
+def numeric_key(filename):
+    return int(re.search(r'(\d+)', filename).group())
+
+
+# Sorts the filenames based on the numeric part extracted by the numeric_key function.
+file_list = sorted(os.listdir(snapshots_dir), key=numeric_key)
+
+for filename in file_list:
+    filepath = os.path.join(snapshots_dir, filename)
+    print(f"============= Processing {filepath} =============")
+    snapshot_df = pd.read_csv(filepath)
+    snapshot_bi_graph = preprocessing.create_bipartite_graph(snapshot_df, temporal=False)
+
+    model, embeddings = experiment.run_graph_autoencoder(snapshot_bi_graph, embeddings,
+                                                         configs.input_size, configs.embedding_size, configs.hidden_size,
+                                                         snapshot_df.user_id.nunique(), snapshot_df.item_id.nunique(),
+                                                         head=configs.model['attention_head'],
+                                                         dropout=configs.model['dropout'], epochs=configs.epochs)
+
+    embeddings = embeddings.detach()  # detach from the computation graph
+
+
+# bi_graph = preprocessing.create_bipartite_graph(train_df, temporal=TEMPORAL)
+# model, embeddings = experiment.run_graph_autoencoder(bi_graph, EMBEDDING_SIZE, OUTPUT_SIZE, HIDDEN_SIZE,
+#                                                      train_df.user_id.nunique(), train_df.item_id.nunique(),
+#                                                      user_indices, item_indices,
+#                                                      head=ATTENTION_HEAD, dropout=DROPOUT, epochs=EPOCHS)
 
 mlflow.set_tag('Model', model.__class__.__name__)
 
@@ -127,6 +101,9 @@ embeddings = utils.load_embeddings(f'../Embedding/{RUN_NAME}.h5', 'embeddings')
 
 # ----------------------------------------- Ranking --------------------------------------------
 k = 5
+user_indices = np.arange(start=0, stop=len(set(train_df.user_id)), step=1)
+item_indices = np.arange(start=len(set(train_df.user_id)), stop=len(set(train_df.user_id)) + len(set(train_df.item_id)),
+                         step=1)
 user_embeddings = embeddings[user_indices]
 item_embeddings = embeddings[item_indices]
 
@@ -147,13 +124,16 @@ mlflow.log_metric(f'Precision_at_{k}', precision)
 mlflow.log_metric(f'Recall_at_{k}', recall)
 mlflow.log_metric(f'NDCG_at_{k}', ndcg)
 
-wandb.log({'Precision': precision, 'Recall': recall,
-           'NDCG': ndcg, 'Hit-Ratio': hit_ratio,
-           'data_size': train_df.shape[0]})
+wandb.log({
+    'Precision': precision, 'Recall': recall,
+    'NDCG': ndcg, 'Hit-Ratio': hit_ratio,
+    'data_size': train_df.shape[0],
+    'users': train_df.user_id.nunique(),
+    'items': train_df.item_id.nunique()
+})
 
 # ----------------------------------------- Finishing -----------------------------------------
 utils.update_env()  # update experiment_number in the env file
-
 
 execution_time = time.time() - start_time
 mlflow.log_metric('Execution-Time', execution_time)
