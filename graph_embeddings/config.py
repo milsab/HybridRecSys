@@ -1,7 +1,11 @@
 config_dict = {
   "experiment_name": "GRAPH_EMBEDDING",
+  # "experiment_type": "time_edge_random",   # time as edge_attr | node_features initialize randomly
+  # "experiment_type": "time_edge_original",  # time as edge_attr | node_features initialize with user&item features
+  "experiment_type": "time_snapshot_iterative",  #time as series of snapshots with iterative approach
   "dataset_name": "KR",
   "dataset_sample_ration": 1,
+  "snapshots_dir": "datasets/snapshots/KR",
 
   "epochs": 1,
   "learning_rate": 0.01,
@@ -38,8 +42,10 @@ class Config:
     def __init__(self):
 
         self.experiment_name = config_dict.get('experiment_name')
+        self.experiment_type = config_dict.get('experiment_type')
         self.dataset_name = config_dict.get('dataset_name')
         self.dataset_sample_ration = config_dict.get('dataset_sample_ration')
+        self.snapshots_dir = config_dict.get('snapshots_dir')
 
         self.epochs = config_dict.get('epochs')
         self.learning_rate = config_dict.get('learning_rate')

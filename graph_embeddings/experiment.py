@@ -25,6 +25,18 @@ def train(data, model, optimizer):
     return loss.item()
 
 
+def get_random_embeddings(num_users, num_items):
+    configs = utils.load_config()
+
+    user_features = torch.randn(num_users, configs.embedding_size)
+    item_features = torch.randn(num_items, configs.embedding_size)
+
+    # Concatenate user and item features into a single node feature matrix
+    node_features = torch.cat([user_features, item_features], dim=0)
+
+    return node_features
+
+
 def get_original_embeddings():
     """
     This method gets original features of a node (user or item) and convert them to higher dimension using a simple
@@ -53,22 +65,30 @@ def get_original_embeddings():
     return high_dimension_features
 
 
-def run_graph_autoencoder(bi_graph, embeddings, in_channels, out_channel, hidden_size, num_users, num_items,
-                          head, dropout, epochs):
+def run_graph_autoencoder(bi_graph, initial_embeddings, num_users, num_items):
     # Parameters
     configs = utils.load_config()
-    in_channels = in_channels  # number of features per node
-    out_channels = out_channel  # size of the latent space
 
-    if embeddings is None:
+    '''
+    embeddings=0 => initialize node_features(bi_graph.x) randomly
+    embeddings=None => initialize node_features with static users and items features
+    embeddings=/otherwise/ => set node_features with previous snapshot learned node_features   
+    '''
+    if initial_embeddings == 'random':
+        node_features = get_random_embeddings(num_users, num_items)
+    elif initial_embeddings is None:
         node_features = get_original_embeddings()
     else:
-        node_features = embeddings
+        node_features = initial_embeddings
 
     bi_graph.x = node_features
 
     # Model Initialization
-    encoder = models.GATEncoder(in_channels, out_channels, hidden_size, head, dropout)
+    encoder = models.GATEncoder(in_channels=configs.embedding_size,
+                                out_channels=configs.embedding_size,
+                                hidden_dim=configs.hidden_size,
+                                head=configs.model['attention_head'],
+                                dropout=configs.model['dropout'])
     model = models.GraphAutoencoder(encoder)
     optimizer = torch.optim.Adam(model.parameters(), lr=configs.learning_rate)
 
@@ -78,7 +98,7 @@ def run_graph_autoencoder(bi_graph, embeddings, in_channels, out_channel, hidden
     model = model.to(device)
 
     # Training Loop
-    for epoch in range(epochs):
+    for epoch in range(configs.epochs):
         loss = train(data, model, optimizer)
         print(f'Epoch {epoch + 1}, Loss: {loss:.4f}')
         wandb.log({'Train Loss': loss})
@@ -94,7 +114,6 @@ def run_graph_autoencoder(bi_graph, embeddings, in_channels, out_channel, hidden
 
 
 def get_evaluation(data, embeddings, user_indices, item_indices, k=5):
-
     embeddings = embeddings.cpu().detach().numpy()
     user_embeddings = embeddings[user_indices]
     item_embeddings = embeddings[item_indices]
@@ -108,4 +127,3 @@ def get_evaluation(data, embeddings, user_indices, item_indices, k=5):
     wandb.log({'Train Hit-Ratio': hit_ratio})
     wandb.log({'Train Precision': hit_ratio, 'Train Recall': recall})
     wandb.log({'Train NDCG': ndcg})
-

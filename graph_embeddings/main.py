@@ -10,6 +10,7 @@ import preprocessing
 import clustering
 import experiment
 import ranking
+from run import Run
 import plot
 import evaluation
 from sklearn.cluster import KMeans
@@ -46,44 +47,18 @@ mlflow.set_tag('Data Size', train_df.shape[0])
 mlflow.set_tag('No. of Users', train_df.user_id.nunique())
 mlflow.set_tag('No. of Items', train_df.item_id.nunique())
 
-# ----------------------------------------- Run the Model -----------------------------------------
+wandb.log({
+    'data_size': train_df.shape[0],
+    'users': train_df.user_id.nunique(),
+    'items': train_df.item_id.nunique()
+})
 
-snapshots_dir = 'datasets/snapshots/KR'
-embeddings = None
-
-import re
-
-
-# Use a regular expression to extract the numeric part of the filename and converts it to an integer
-def numeric_key(filename):
-    return int(re.search(r'(\d+)', filename).group())
-
-
-# Sorts the filenames based on the numeric part extracted by the numeric_key function.
-file_list = sorted(os.listdir(snapshots_dir), key=numeric_key)
-
-for filename in file_list:
-    filepath = os.path.join(snapshots_dir, filename)
-    print(f"============= Processing {filepath} =============")
-    snapshot_df = pd.read_csv(filepath)
-    snapshot_bi_graph = preprocessing.create_bipartite_graph(snapshot_df, temporal=False)
-
-    model, embeddings = experiment.run_graph_autoencoder(snapshot_bi_graph, embeddings,
-                                                         configs.input_size, configs.embedding_size, configs.hidden_size,
-                                                         snapshot_df.user_id.nunique(), snapshot_df.item_id.nunique(),
-                                                         head=configs.model['attention_head'],
-                                                         dropout=configs.model['dropout'], epochs=configs.epochs)
-
-    embeddings = embeddings.detach()  # detach from the computation graph
-
-
-# bi_graph = preprocessing.create_bipartite_graph(train_df, temporal=TEMPORAL)
-# model, embeddings = experiment.run_graph_autoencoder(bi_graph, EMBEDDING_SIZE, OUTPUT_SIZE, HIDDEN_SIZE,
-#                                                      train_df.user_id.nunique(), train_df.item_id.nunique(),
-#                                                      user_indices, item_indices,
-#                                                      head=ATTENTION_HEAD, dropout=DROPOUT, epochs=EPOCHS)
+# ----------------------------------------- Run Experiment ----------------------------------------
+run = Run(train_df, configs)
+model, embeddings = run.start()
 
 mlflow.set_tag('Model', model.__class__.__name__)
+wandb.log({'model': model.__class__.__name__})
 
 # Save embeddings as NumPy using h5py with compression
 utils.save_embeddings(embeddings.detach().cpu().numpy(), f'../Embedding/{RUN_NAME}.h5', 'embeddings')
@@ -125,11 +100,10 @@ mlflow.log_metric(f'Recall_at_{k}', recall)
 mlflow.log_metric(f'NDCG_at_{k}', ndcg)
 
 wandb.log({
-    'Precision': precision, 'Recall': recall,
-    'NDCG': ndcg, 'Hit-Ratio': hit_ratio,
-    'data_size': train_df.shape[0],
-    'users': train_df.user_id.nunique(),
-    'items': train_df.item_id.nunique()
+    'Precision': precision,
+    'Recall': recall,
+    'NDCG': ndcg,
+    'Hit-Ratio': hit_ratio
 })
 
 # ----------------------------------------- Finishing -----------------------------------------

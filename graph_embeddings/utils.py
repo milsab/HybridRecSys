@@ -50,6 +50,7 @@ def set_wandb(wandb_key, wandb_name, dataset_file, machine_name):
     config = load_config()
     wandb.login(key=wandb_key)
     hyper_params = dict(
+        exp_type=config.experiment_type,
         DS_file=dataset_file,
         embedding_size=config.embedding_size,
         in_dim=config.input_size,
@@ -84,7 +85,7 @@ def set_mlflow(machine_name, run_name, mlflow_tracking_uri, dagshub_owner, dagsh
 
     mlflow.set_tag('type', f'{run_name}')
     mlflow.set_tag('DS File', dataset_file)
-
+    mlflow.set_tag('Experiment Type', config.experiment_type)
     mlflow.log_param('EPOCHS', config.epochs)
     mlflow.log_param('EMBEDDING_SIZE', config.embedding_size)
     mlflow.log_param('INPUT_SIZE', config.input_size)
