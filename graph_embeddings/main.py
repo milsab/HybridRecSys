@@ -1,24 +1,21 @@
 import numpy as np
-import pandas as pd
 import time
-import os
 import mlflow
 import wandb
 import utils
-import models
 import preprocessing
 import clustering
-import experiment
 import ranking
 from run import Run
 import plot
 import evaluation
-from sklearn.cluster import KMeans
 
 # Record the start time
 start_time = time.time()
 
+log = utils.get_log()
 # ----------------------------------------- Load env file -----------------------------------------
+log.info('Load env. File ')
 exp_num, machine_name, wandb_key, dataset_path, mlflow_tracking_uri, dagshub_owner, dagshub_repo = utils.read_env()
 
 exp_num = 's' + str(
@@ -26,6 +23,7 @@ exp_num = 's' + str(
 
 
 # ----------------------------------------- Load config file -----------------------------------------
+log.info('Load Config File')
 configs = utils.load_config()
 
 DATASET_FILE = f'{dataset_path}kairec_big_core5.csv' if configs.dataset_name == 'KR' else f'{dataset_path}goodreads_core50.csv'
@@ -36,12 +34,17 @@ RUN_NAME = f'{exp_num}_{configs.dataset_name}_GAT_TEMPORAL_{configs.embedding_si
 print(RUN_NAME)
 
 # ----------------------------------------- Set MLFlow and WANDB -----------------------------------------
+log.info('Set MLFlow & WANDB')
 utils.set_mlflow(machine_name, RUN_NAME, mlflow_tracking_uri, dagshub_owner, dagshub_repo, DATASET_FILE)
 utils.set_wandb(wandb_key, RUN_NAME, DATASET_FILE, machine_name)
 
-# -------------------------------- Load Data & Create Bipartite Graph --------------------------------
-train_df, test_df = preprocessing.split_data(DATASET_FILE, configs.dataset_sample_ration, split_manner=configs.split_manner,
-                                             test_ratio=0.2, convert_to_timestamp=CONVERT_TO_TIMESTAMP)
+# -------------------------------- Load Data --------------------------------
+log.info('Load Data')
+train_df, test_df = preprocessing.split_data(DATASET_FILE,
+                                             sample_ratio=configs.dataset_sample_ratio,
+                                             split_manner=configs.split_manner,
+                                             test_ratio=configs.test_ratio,
+                                             convert_to_timestamp=CONVERT_TO_TIMESTAMP)
 
 mlflow.set_tag('Data Size', train_df.shape[0])
 mlflow.set_tag('No. of Users', train_df.user_id.nunique())
@@ -54,6 +57,7 @@ wandb.log({
 })
 
 # ----------------------------------------- Run Experiment ----------------------------------------
+log.info('Run Experiment')
 run = Run(train_df, configs)
 model, embeddings = run.start()
 
@@ -75,6 +79,7 @@ embeddings = utils.load_embeddings(f'../Embedding/{RUN_NAME}.h5', 'embeddings')
 #               run_name=RUN_NAME)
 
 # ----------------------------------------- Ranking --------------------------------------------
+log.info('Ranking')
 k = 5
 user_indices = np.arange(start=0, stop=len(set(train_df.user_id)), step=1)
 item_indices = np.arange(start=len(set(train_df.user_id)), stop=len(set(train_df.user_id)) + len(set(train_df.item_id)),
@@ -85,6 +90,7 @@ item_embeddings = embeddings[item_indices]
 recommendation = ranking.get_top_k(user_embeddings, item_embeddings, k=k)
 
 # ----------------------------------------- Evaluation -----------------------------------------
+log.info('Evaluation')
 hit_ratio = evaluation.evaluate_hits(test_df, recommendation)
 precision, recall = evaluation.precision_recall_at_k(recommendation, test_set=test_df, k=k)
 ndcg = evaluation.ndcg(recommendation, test_set=test_df, k=k)
@@ -107,6 +113,7 @@ wandb.log({
 })
 
 # ----------------------------------------- Finishing -----------------------------------------
+log.info('Finishing')
 utils.update_env()  # update experiment_number in the env file
 
 execution_time = time.time() - start_time

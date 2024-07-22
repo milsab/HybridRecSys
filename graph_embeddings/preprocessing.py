@@ -5,6 +5,8 @@ import torch
 
 from torch_geometric.data import Data
 
+import utils
+
 
 def load_dataset(path, sample_ratio):
 
@@ -78,6 +80,17 @@ def split_data(path, sample_ratio, test_ratio, split_manner, convert_to_timestam
 
 
 def create_bipartite_graph(df, temporal):
+    configs = utils.load_config()
+    log = utils.get_log()
+    if configs.load_bi_graph_from_file:
+        try:
+            log.info('Loading Bipartite Graph ...')
+            return torch.load('datasets/bipartite_graph.pt')
+        except FileNotFoundError:
+            log.error('Saved Bipartite Graph Not Found!!')
+
+    log.info('Creating Bipartite Graph ...')
+
     # Ensure user_ids and item_ids are consecutive and non-overlapping
     unique_users = df['user_id'].unique()
     unique_items = df['item_id'].unique()
@@ -99,6 +112,8 @@ def create_bipartite_graph(df, temporal):
     else:
         bi_graph = Data(x=None, edge_index=edge_index)
 
+    log.info('Saving Bipartite Graph ...')
+    torch.save(bi_graph, 'datasets/bipartite_graph.pt')
     return bi_graph
 
 

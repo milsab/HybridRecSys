@@ -3,12 +3,14 @@ import pandas as pd
 
 import preprocessing
 import experiment
+import utils
 
 
 class Run:
     def __init__(self, train_df, configs):
         self.train_df = train_df
         self.configs = configs
+        self.log = utils.get_log()
         self.experiments = {
             'time_edge_random': (self.__time_edge_random, ()),
             'time_edge_original': (self.__time_edge_original, ()),
@@ -33,16 +35,18 @@ class Run:
 
     def __time_edge_original(self):
         print(f"============= Experiment Type: __time_edge_original =============")
+
+        self.log.info('create_bipartite_graph')
         bi_graph = preprocessing.create_bipartite_graph(self.train_df,
                                                         temporal=True)  # temporal=true adds time as edge_att
 
+        self.log.info('run_graph_autoencoder')
         # embeddings=0 will initialize embeddings (node features: Data.x) with original users and items features
         model, embeddings = experiment.run_graph_autoencoder(bi_graph, initial_embeddings=None,
                                                              num_users=self.train_df.user_id.nunique(),
                                                              num_items=self.train_df.item_id.nunique()
                                                              )
         return model, embeddings
-        return
 
     def __time_snapshot_iterative(self):
         print(f"============= Experiment Type: time_snapshot_iterative =============")
@@ -62,7 +66,6 @@ class Run:
                                                                  num_items=self.train_df.item_id.nunique(),
                                                                  )
             embeddings = embeddings.detach()  # detach from the computation graph
-
         return model, embeddings
 
     def __time_snapshots_rnn(self):

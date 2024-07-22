@@ -3,6 +3,7 @@ import wandb
 import json
 import mlflow
 import dagshub
+import logging
 from config import Config
 import pandas as pd
 
@@ -61,7 +62,8 @@ def set_wandb(wandb_key, wandb_name, dataset_file, machine_name):
         model_approach=config.model['type'],
         epochs=config.epochs,
         split=config.split_manner,
-        timeframe=config.timeframe
+        timeframe=config.timeframe,
+        learning_rate=config.learning_rate
     )
     wandb.init(
         # set the wandb project where this run will be logged
@@ -87,12 +89,13 @@ def set_mlflow(machine_name, run_name, mlflow_tracking_uri, dagshub_owner, dagsh
     mlflow.set_tag('DS File', dataset_file)
     mlflow.set_tag('Experiment Type', config.experiment_type)
     mlflow.log_param('EPOCHS', config.epochs)
+    mlflow.log_param('LEARNING_RATE', config.learning_rate)
     mlflow.log_param('EMBEDDING_SIZE', config.embedding_size)
     mlflow.log_param('INPUT_SIZE', config.input_size)
     mlflow.log_param('HIDDEN_SIZE', config.hidden_size)
 
     # mlflow.log_param('K-KMeans', KMeans)
-    mlflow.log_param('DATASET_SAMPLE_RATIO', config.dataset_sample_ration)
+    mlflow.log_param('DATASET_SAMPLE_RATIO', config.dataset_sample_ratio)
     mlflow.log_param('SPLIT', config.split_manner)
     mlflow.log_param('TIMEFRAME', config.timeframe)
 
@@ -109,3 +112,8 @@ def get_sparsity(df):
 
     return sparsity * 100
 
+
+def get_log():
+    logging.basicConfig(level=logging.INFO, format='\n ----> %(levelname)s - %(message)s')
+    logger = logging.getLogger(__name__)
+    return logger

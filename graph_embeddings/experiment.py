@@ -1,18 +1,12 @@
 import torch
+import torch.nn.functional as F
 import wandb
-from torch_geometric.nn import GATConv, GAE
 
 import utils
 import models
 import ranking
 import evaluation
 import preprocessing
-
-
-# Initialize Embedding Randomly
-def initialize_embedding_random(item_ids, embedding_dim):
-    x = torch.randn((max(item_ids) + 1, embedding_dim), requires_grad=True)
-    return x
 
 
 def train(data, model, optimizer):
@@ -27,7 +21,9 @@ def train(data, model, optimizer):
 
 def get_random_embeddings(num_users, num_items):
     configs = utils.load_config()
+    print(f'get_random_embeddings started...')
 
+    torch.manual_seed(configs.torch_seed)
     user_features = torch.randn(num_users, configs.embedding_size)
     item_features = torch.randn(num_items, configs.embedding_size)
 
@@ -44,6 +40,7 @@ def get_original_embeddings():
     :return: embeddings with higher dimension
     """
     configs = utils.load_config()
+    print(f'get_original_embeddings started...')
 
     def get_high_dimension_embedding(original_features):
         model = models.EmbeddingNN(input_dim=original_features.shape[1],
@@ -51,22 +48,25 @@ def get_original_embeddings():
                                    output_dim=configs.embedding_size)
 
         embeddings = model(original_features)
+        embeddings = embeddings.detach()  # detach from the computation graph
 
+        embeddings = F.normalize(embeddings, p=2, dim=1)
         return embeddings
 
     original_user_features = torch.tensor(preprocessing.get_users_static_features().values, dtype=torch.float32)
-    original_item_features = torch.tensor(preprocessing.get_items_static_features().values, dtype=torch.float32)
-
     user_feature_high_dimension = get_high_dimension_embedding(original_user_features)
+
+    original_item_features = torch.tensor(preprocessing.get_items_static_features().values, dtype=torch.float32)
     item_feature_high_dimension = get_high_dimension_embedding(original_item_features)
 
     high_dimension_features = torch.cat([user_feature_high_dimension, item_feature_high_dimension], dim=0)
+
 
     return high_dimension_features
 
 
 def run_graph_autoencoder(bi_graph, initial_embeddings, num_users, num_items):
-    # Parameters
+
     configs = utils.load_config()
 
     '''
@@ -94,12 +94,12 @@ def run_graph_autoencoder(bi_graph, initial_embeddings, num_users, num_items):
 
     # Move data to GPU if available
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    data = bi_graph.to(device)
+    bi_graph = bi_graph.to(device)
     model = model.to(device)
 
     # Training Loop
     for epoch in range(configs.epochs):
-        loss = train(data, model, optimizer)
+        loss = train(bi_graph, model, optimizer)
         print(f'Epoch {epoch + 1}, Loss: {loss:.4f}')
         wandb.log({'Train Loss': loss})
         # embeddings_after_each_epoch = model.encode(data.x, data.edge_index)
@@ -108,7 +108,7 @@ def run_graph_autoencoder(bi_graph, initial_embeddings, num_users, num_items):
     # Get embeddings
     model.eval()
     with torch.no_grad():
-        embeddings = model.encode(data.x, data.edge_index)
+        embeddings = model.encode(bi_graph.x, bi_graph.edge_index)
 
     return model, embeddings
 
