@@ -21,30 +21,31 @@ exp_num, machine_name, wandb_key, dataset_path, mlflow_tracking_uri, dagshub_own
 exp_num = 's' + str(
     exp_num) if machine_name == 'Server-GPU' else exp_num  # add "s" in the run-name if it runs on Server
 
-
 # ----------------------------------------- Load config file -----------------------------------------
 log.info('Load Config File')
 configs = utils.load_config()
 
-DATASET_FILE = f'{dataset_path}kairec_big_core5.csv' if configs.dataset_name == 'KR' else f'{dataset_path}goodreads_core50.csv'
-CONVERT_TO_TIMESTAMP = True if configs.dataset_name == 'GR' else False
-
-RUN_NAME = f'{exp_num}_{configs.dataset_name}_GAT_TEMPORAL_{configs.embedding_size}_spl_{configs.split_manner}' if configs.temporal \
-    else f'{exp_num}_{configs.dataset_name}_GAT_{configs.embedding_size}_spl_{configs.split_manner}'
+RUN_NAME = f'{exp_num}_{configs.dataset_name}_{configs.experiment_type}'
 print(RUN_NAME)
+
+dataset_file = dataset_path + configs.KR_dataset_file if configs.dataset_name == 'KR' \
+    else dataset_path + configs.GR_dataset_file
 
 # ----------------------------------------- Set MLFlow and WANDB -----------------------------------------
 log.info('Set MLFlow & WANDB')
-utils.set_mlflow(machine_name, RUN_NAME, mlflow_tracking_uri, dagshub_owner, dagshub_repo, DATASET_FILE)
-utils.set_wandb(wandb_key, RUN_NAME, DATASET_FILE, machine_name)
+utils.set_mlflow(machine_name, RUN_NAME, mlflow_tracking_uri, dagshub_owner, dagshub_repo, dataset_file)
+utils.set_wandb(wandb_key, RUN_NAME, machine_name, dataset_file)
 
 # -------------------------------- Load Data --------------------------------
 log.info('Load Data')
-train_df, test_df = preprocessing.split_data(DATASET_FILE,
+
+
+
+train_df, test_df = preprocessing.split_data(dataset_file,
                                              sample_ratio=configs.dataset_sample_ratio,
                                              split_manner=configs.split_manner,
                                              test_ratio=configs.test_ratio,
-                                             convert_to_timestamp=CONVERT_TO_TIMESTAMP)
+                                             convert_to_timestamp=configs.convert_to_timestamp)
 
 mlflow.set_tag('Data Size', train_df.shape[0])
 mlflow.set_tag('No. of Users', train_df.user_id.nunique())

@@ -70,7 +70,7 @@ def run_graph_autoencoder(bi_graph, initial_embeddings, num_users, num_items):
     configs = utils.load_config()
 
     '''
-    embeddings=0 => initialize node_features(bi_graph.x) randomly
+    embeddings='random' => initialize node_features(bi_graph.x) randomly
     embeddings=None => initialize node_features with static users and items features
     embeddings=/otherwise/ => set node_features with previous snapshot learned node_features   
     '''

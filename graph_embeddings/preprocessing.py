@@ -79,13 +79,21 @@ def split_data(path, sample_ratio, test_ratio, split_manner, convert_to_timestam
     return train_df, test_df
 
 
-def create_bipartite_graph(df, temporal):
+def create_bipartite_graph(df, temporal, snapshot=False, snapshot_no=0):
     configs = utils.load_config()
     log = utils.get_log()
-    if configs.load_bi_graph_from_file:
+    if configs.regenerate_bi_graph is False:
         try:
             log.info('Loading Bipartite Graph ...')
-            return torch.load('datasets/bipartite_graph.pt')
+            if snapshot:
+                bi_graph = torch.load(f'datasets/snapshots/{configs.dataset_name}/{snapshot_no}_bi_graph.pt')
+            else:
+                bi_graph = torch.load(f'datasets/{configs.dataset_name}_bipartite_graph.pt')
+
+            if temporal:    # adding timestamp as edge attribute
+                bi_graph.edge_attr = torch.tensor(df['edge_attr'].values, dtype=torch.float).reshape(-1, 1)
+
+            return bi_graph
         except FileNotFoundError:
             log.error('Saved Bipartite Graph Not Found!!')
 
@@ -105,15 +113,23 @@ def create_bipartite_graph(df, temporal):
         for _, row in df.iterrows()
     ]).t().contiguous()
 
-    # Include edge attributes like timestamp
-    if temporal:
-        edge_attr = torch.tensor(df['edge_attr'].values, dtype=torch.float).reshape(-1, 1)
-        bi_graph = Data(x=None, edge_index=edge_index, edge_attr=edge_attr)
-    else:
-        bi_graph = Data(x=None, edge_index=edge_index)
+    bi_graph = Data(x=None, edge_index=edge_index)
+
+    # # Include edge attributes like timestamp
+    # if temporal:
+    #     edge_attr = torch.tensor(df['edge_attr'].values, dtype=torch.float).reshape(-1, 1)
+    #     bi_graph = Data(x=None, edge_index=edge_index, edge_attr=edge_attr)
+    # else:
+    #     bi_graph = Data(x=None, edge_index=edge_index)
 
     log.info('Saving Bipartite Graph ...')
-    torch.save(bi_graph, 'datasets/bipartite_graph.pt')
+    if snapshot:
+        torch.save(bi_graph, f'datasets/snapshots/{configs.dataset_name}/{snapshot_no}_bi_graph.pt')
+    else:
+        torch.save(bi_graph, f'datasets/{configs.dataset_name}_bipartite_graph.pt')
+
+    if temporal:
+        bi_graph.edge_attr = torch.tensor(df['edge_attr'].values, dtype=torch.float).reshape(-1, 1)
     return bi_graph
 
 

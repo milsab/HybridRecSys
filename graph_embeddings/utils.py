@@ -47,7 +47,7 @@ def load_embeddings(path, dataset_name):
         return embeddings
 
 
-def set_wandb(wandb_key, wandb_name, dataset_file, machine_name):
+def set_wandb(wandb_key, wandb_name, machine_name, dataset_file):
     config = load_config()
     wandb.login(key=wandb_key)
     hyper_params = dict(
@@ -85,6 +85,7 @@ def set_mlflow(machine_name, run_name, mlflow_tracking_uri, dagshub_owner, dagsh
     mlflow.set_experiment(config.experiment_name)
     mlflow.start_run(run_name=run_name)
 
+    mlflow.set_tag('Machine Name', machine_name)
     mlflow.set_tag('type', f'{run_name}')
     mlflow.set_tag('DS File', dataset_file)
     mlflow.set_tag('Experiment Type', config.experiment_type)

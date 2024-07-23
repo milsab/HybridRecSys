@@ -1,16 +1,21 @@
 config_dict = {
   "experiment_name": "GRAPH_EMBEDDING",
 
+  # "experiment_type": "no_time",   # time as edge_attr | node_features initialize randomly
   # "experiment_type": "time_edge_random",   # time as edge_attr | node_features initialize randomly
-  "experiment_type": "time_edge_original",  # time as edge_attr | node_features initialize with user&item features
-  # "experiment_type": "time_snapshot_iterative",  # time as series of snapshots with iterative approach
+  # "experiment_type": "time_edge_original",  # time as edge_attr | node_features initialize with user&item features
+  "experiment_type": "time_snapshot_iterative_random",  # time as series of snapshots with iterative approach (random node features)
+  # "experiment_type": "time_snapshot_iterative_original",  # time as series of snapshots with iterative approach
+
 
   "dataset_name": "KR",
+  "KR_dataset_file": "kairec_big_core5.csv",
+  "GR_dataset_file": "goodreads_core50.csv",
   "dataset_sample_ratio": 1,
   "test_ratio": 0.2,
   "snapshots_dir": "datasets/snapshots/KR",
 
-  "load_bi_graph_from_file": False,
+  "regenerate_bi_graph": False,  # if False => will load bi_graph from file. If True => regenerate bi_graph
 
   "epochs": 30,
   "learning_rate": 0.001,
@@ -20,8 +25,8 @@ config_dict = {
   "embedding_size": 64,
   "batch_size": 64,
 
-  "feedforward_network_hidden_size": 256,  # use for creating original embedding out of the node features
-  "feedforward_network_learning_rate": 0.001,  # use for creating original embedding out of the node features
+  "feedforward_network_hidden_size": 128,  # use for creating original embedding out of the node features
+  "feedforward_network_learning_rate": 0.01,  # use for creating original embedding out of the node features
 
   "timeframe": "W",
   "temporal": True,  # if 'True' then we add timestamp as edge features
@@ -50,7 +55,11 @@ class Config:
 
         self.experiment_name = config_dict.get('experiment_name')
         self.experiment_type = config_dict.get('experiment_type')
+
         self.dataset_name = config_dict.get('dataset_name')
+        self.KR_dataset_file = config_dict.get('KR_dataset_file')
+        self.GR_dataset_file = config_dict.get('GR_dataset_file')
+
         self.dataset_sample_ratio = config_dict.get('dataset_sample_ratio')
         self.test_ratio = config_dict.get('test_ratio')
         self.snapshots_dir = config_dict.get('snapshots_dir')
@@ -79,4 +88,6 @@ class Config:
 
         self.torch_seed = config_dict.get('torch_seed')
 
-        self.load_bi_graph_from_file = config_dict.get('load_bi_graph_from_file')
+        self.regenerate_bi_graph = config_dict.get('regenerate_bi_graph')
+
+        self.convert_to_timestamp = True if self.dataset_name == 'GR' else False
