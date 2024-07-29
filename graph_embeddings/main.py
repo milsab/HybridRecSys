@@ -31,6 +31,8 @@ print(RUN_NAME)
 dataset_file = dataset_path + configs.KR_dataset_file if configs.dataset_name == 'KR' \
     else dataset_path + configs.GR_dataset_file
 
+utils.set_seed(configs.seed)
+
 # ----------------------------------------- Set MLFlow and WANDB -----------------------------------------
 log.info('Set MLFlow & WANDB')
 utils.set_mlflow(machine_name, RUN_NAME, mlflow_tracking_uri, dagshub_owner, dagshub_repo, dataset_file)
@@ -95,6 +97,7 @@ log.info('Evaluation')
 hit_ratio = evaluation.evaluate_hits(test_df, recommendation)
 precision, recall = evaluation.precision_recall_at_k(recommendation, test_set=test_df, k=k)
 ndcg = evaluation.ndcg(recommendation, test_set=test_df, k=k)
+
 
 print(f'Hit Ratio: {hit_ratio:.4f}')
 print(f'Precision_at_{k}: {precision:.4f}')

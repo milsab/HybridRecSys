@@ -86,7 +86,7 @@ def create_bipartite_graph(df, temporal, snapshot=False, snapshot_no=0):
         try:
             log.info('Loading Bipartite Graph ...')
             if snapshot:
-                bi_graph = torch.load(f'datasets/snapshots/{configs.dataset_name}/{snapshot_no}_bi_graph.pt')
+                bi_graph = torch.load(f'datasets/snapshots/{configs.dataset_name}_bi_graphs/{configs.timeframe}/{snapshot_no}_bi_graph.pt')
             else:
                 bi_graph = torch.load(f'datasets/{configs.dataset_name}_bipartite_graph.pt')
 
@@ -124,12 +124,13 @@ def create_bipartite_graph(df, temporal, snapshot=False, snapshot_no=0):
 
     log.info('Saving Bipartite Graph ...')
     if snapshot:
-        torch.save(bi_graph, f'datasets/snapshots/{configs.dataset_name}/{snapshot_no}_bi_graph.pt')
+        torch.save(bi_graph, f'datasets/snapshots/{configs.dataset_name}_bi_graphs/{configs.timeframe}/{snapshot_no}_bi_graph.pt')
     else:
         torch.save(bi_graph, f'datasets/{configs.dataset_name}_bipartite_graph.pt')
 
     if temporal:
         bi_graph.edge_attr = torch.tensor(df['edge_attr'].values, dtype=torch.float).reshape(-1, 1)
+
     return bi_graph
 
 
@@ -150,8 +151,8 @@ def create_snapshots(path, sample_ratio, timeframe, dataset_prefix):
         cumulative_df = pd.concat([cumulative_df, group])
         cumulative_df = cumulative_df[['user_id', 'item_id']]
         filename = f'{i}.csv'
-        cumulative_df.to_csv(f'datasets/snapshots/{dataset_prefix}/{filename}', index=False)
-        print(f"Saved {dataset_prefix}-{filename}")
+        cumulative_df.to_csv(f'datasets/snapshots/{dataset_prefix}_{timeframe}/{filename}', index=False)
+        print(f"Saved {filename}")
 
 
 def get_users_static_features():
@@ -162,5 +163,5 @@ def get_items_static_features():
     return pd.read_csv('datasets/KR_item_features.csv')
 
 
-# create_snapshots('datasets/kairec_big_core5.csv', sample_ratio=1, timeframe='W', dataset_prefix='KR')
+# create_snapshots('datasets/kairec_big_core5.csv', sample_ratio=1, timeframe='M', dataset_prefix='KR')
 

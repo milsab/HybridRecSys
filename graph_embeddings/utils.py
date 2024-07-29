@@ -4,6 +4,9 @@ import json
 import mlflow
 import dagshub
 import logging
+import torch
+import numpy as np
+import random
 from config import Config
 import pandas as pd
 
@@ -60,10 +63,12 @@ def set_wandb(wandb_key, wandb_name, machine_name, dataset_file):
         machine=machine_name,
         clusters=config.n_clusters,
         model_approach=config.model['type'],
+        model_encoder=config.model['encoder_type'],
         epochs=config.epochs,
         split=config.split_manner,
         timeframe=config.timeframe,
-        learning_rate=config.learning_rate
+        learning_rate=config.learning_rate,
+        scheduler_type=config.scheduler['type']
     )
     wandb.init(
         # set the wandb project where this run will be logged
@@ -90,7 +95,11 @@ def set_mlflow(machine_name, run_name, mlflow_tracking_uri, dagshub_owner, dagsh
     mlflow.set_tag('DS File', dataset_file)
     mlflow.set_tag('Experiment Type', config.experiment_type)
     mlflow.log_param('EPOCHS', config.epochs)
+    mlflow.log_param('ENCODER_TYPE', config.model['encoder_type'])
     mlflow.log_param('LEARNING_RATE', config.learning_rate)
+    mlflow.log_param('SCHEDULER_TYPE', config.scheduler['type'])
+    mlflow.log_param('SCHEDULER_GAMMA', config.scheduler['gamma'])
+    mlflow.log_param('SCHEDULER_STEP', config.scheduler['step_size'])
     mlflow.log_param('EMBEDDING_SIZE', config.embedding_size)
     mlflow.log_param('INPUT_SIZE', config.input_size)
     mlflow.log_param('HIDDEN_SIZE', config.hidden_size)
@@ -118,3 +127,11 @@ def get_log():
     logging.basicConfig(level=logging.INFO, format='\n ----> %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
     return logger
+
+
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)

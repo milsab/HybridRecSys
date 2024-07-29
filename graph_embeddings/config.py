@@ -1,24 +1,24 @@
 config_dict = {
   "experiment_name": "GRAPH_EMBEDDING",
 
-  # "experiment_type": "no_time",   # time as edge_attr | node_features initialize randomly
+  "experiment_type": "no_time",   # node_features initialize randomly
   # "experiment_type": "time_edge_random",   # time as edge_attr | node_features initialize randomly
   # "experiment_type": "time_edge_original",  # time as edge_attr | node_features initialize with user&item features
-  "experiment_type": "time_snapshot_iterative_random",  # time as series of snapshots with iterative approach (random node features)
+  # "experiment_type": "time_snapshot_iterative_random",  # time as series of snapshots with iterative approach (random node features)
   # "experiment_type": "time_snapshot_iterative_original",  # time as series of snapshots with iterative approach
 
 
   "dataset_name": "KR",
   "KR_dataset_file": "kairec_big_core5.csv",
   "GR_dataset_file": "goodreads_core50.csv",
+  "snapshots_dir": "datasets/snapshots",
+
   "dataset_sample_ratio": 1,
   "test_ratio": 0.2,
-  "snapshots_dir": "datasets/snapshots/KR",
 
   "regenerate_bi_graph": False,  # if False => will load bi_graph from file. If True => regenerate bi_graph
 
-  "epochs": 30,
-  "learning_rate": 0.001,
+  "epochs": 5,
 
   "input_size": 64,
   "hidden_size": 128,
@@ -28,24 +28,36 @@ config_dict = {
   "feedforward_network_hidden_size": 128,  # use for creating original embedding out of the node features
   "feedforward_network_learning_rate": 0.01,  # use for creating original embedding out of the node features
 
-  "timeframe": "W",
+  "timeframe": "M",
   "temporal": True,  # if 'True' then we add timestamp as edge features
   "split_manner": "temporal",  # if 'temporal' => Temporal Split, if 'random' => Random Split
 
   "model": {
     "type": "GAE",
+    "encoder_type": "GAT",
     "attention_head": 4,
-    "layers": 5,
     "dropout": 0.3
   },
 
   "optimizer": {
     "type": "Adam",
-    "momentum": 0.9
+    "learning_rate": 0.001,
+    "momentum": 0.9,
+    "weight_decay": 0.0005,
+  },
+
+  "scheduler": {
+      "type": "none",
+      # "type": "plateau",
+      # "type": "exponential",
+      # "type": "step",
+      "step_size": 10,
+      "gamma": 0.1,
+      "patience": 5
   },
 
   "n_clusters": 5,
-  "torch_seed": 7
+  "seed": 10
 
 }
 
@@ -77,6 +89,7 @@ class Config:
 
         self.model = config_dict.get('model')
         self.optimizer = config_dict.get('optimizer')
+        self.scheduler = config_dict.get('scheduler')
 
         self.timeframe = config_dict.get('timeframe')
 
@@ -86,7 +99,7 @@ class Config:
 
         self.n_clusters = config_dict.get('n_clusters')
 
-        self.torch_seed = config_dict.get('torch_seed')
+        self.seed = config_dict.get('seed')
 
         self.regenerate_bi_graph = config_dict.get('regenerate_bi_graph')
 

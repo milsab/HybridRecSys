@@ -67,9 +67,10 @@ class Run:
         snapshot_files = self.__get_snapshots()
 
         embeddings = "random"
+        path = f'{self.configs.snapshots_dir}/{self.configs.dataset_name}_{self.configs.timeframe}'
         i = 1
         for file_name in snapshot_files:
-            filepath = os.path.join(self.configs.snapshots_dir, file_name)
+            filepath = os.path.join(path, file_name)
             print(f" --------------- Processing {filepath} ---------------")
 
             snapshot_df = pd.read_csv(filepath)
@@ -92,9 +93,10 @@ class Run:
         snapshot_files = self.__get_snapshots()
 
         embeddings = None
+        path = f'{self.configs.snapshots_dir}/{self.configs.dataset_name}_{self.configs.timeframe}'
         i = 1
         for file_name in snapshot_files:
-            filepath = os.path.join(self.configs.snapshots_dir, file_name)
+            filepath = os.path.join(path, file_name)
             print(f" --------------- Processing {filepath} ---------------")
 
             snapshot_df = pd.read_csv(filepath)
@@ -126,7 +128,7 @@ class Run:
         return model, embeddings
 
     def __get_snapshots(self):
-        snapshots_dir = self.configs.snapshots_dir
+        snapshots_dir = f'{self.configs.snapshots_dir}/{self.configs.dataset_name}_{self.configs.timeframe}'
 
         # Use a regular expression to extract the numeric part of the filename and converts it to an integer
         import re

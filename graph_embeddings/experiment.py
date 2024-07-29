@@ -1,6 +1,8 @@
 import torch
 import torch.nn.functional as F
+from torch_geometric.utils import negative_sampling
 import wandb
+from tqdm import tqdm
 
 import utils
 import models
@@ -9,13 +11,15 @@ import evaluation
 import preprocessing
 
 
-def train(data, model, optimizer):
+def train(data, model, optimizer, scheduler=None):
     model.train()
     optimizer.zero_grad()
     z = model.encode(data.x, data.edge_index)
     loss = model.recon_loss(z, data.edge_index)
     loss.backward()
     optimizer.step()
+    if scheduler is not None:
+        scheduler.step()
     return loss.item()
 
 
@@ -23,7 +27,7 @@ def get_random_embeddings(num_users, num_items):
     configs = utils.load_config()
     print(f'get_random_embeddings started...')
 
-    torch.manual_seed(configs.torch_seed)
+    torch.manual_seed(configs.seed)
     user_features = torch.randn(num_users, configs.embedding_size)
     item_features = torch.randn(num_items, configs.embedding_size)
 
@@ -61,6 +65,11 @@ def get_original_embeddings():
 
     high_dimension_features = torch.cat([user_feature_high_dimension, item_feature_high_dimension], dim=0)
 
+    # original_user_features = torch.tensor(preprocessing.get_users_static_features().values, dtype=torch.float32)
+    # original_item_features = torch.tensor(preprocessing.get_items_static_features().values, dtype=torch.float32)
+    # # Pad the item features to match the user feature dimensions
+    # item_features_padded = torch.nn.functional.pad(original_item_features, (0, 5))  # num_items x 6
+    # node_features = torch.cat([original_user_features, item_features_padded], dim=0)  # (num_users + num_items) x 6
 
     return high_dimension_features
 
@@ -84,13 +93,34 @@ def run_graph_autoencoder(bi_graph, initial_embeddings, num_users, num_items):
     bi_graph.x = node_features
 
     # Model Initialization
-    encoder = models.GATEncoder(in_channels=configs.embedding_size,
-                                out_channels=configs.embedding_size,
-                                hidden_dim=configs.hidden_size,
-                                head=configs.model['attention_head'],
-                                dropout=configs.model['dropout'])
-    model = models.GraphAutoencoder(encoder)
-    optimizer = torch.optim.Adam(model.parameters(), lr=configs.learning_rate)
+    if configs.model['encoder_type'] == 'GAT':
+        encoder = models.GATEncoder(in_channels=configs.input_size,
+                                    out_channels=configs.embedding_size,
+                                    hidden_dim=configs.hidden_size,
+                                    head=configs.model['attention_head'],
+                                    dropout=configs.model['dropout'])
+    elif configs.model['encoder_type'] == 'GCN':
+        encoder = models.GATEncoder(in_channels=configs.input_size,
+                                    out_channels=configs.embedding_size,
+                                    hidden_dim=configs.hidden_size,
+                                    dropout=configs.model['dropout'])
+
+    model = models.GraphAutoEncoder(encoder)
+
+    optimizer = torch.optim.Adam(model.parameters(),
+                                 lr=configs.optimizer['learning_rate'],
+                                 weight_decay=configs.optimizer['weight_decay'])
+
+    if configs.scheduler['type'] == 'plateau':
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=configs.scheduler['gamma'],
+                                                               patience=configs.scheduler['patience'], min_lr=1e-5)
+    elif configs.scheduler['type'] == 'exponential':
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=configs.scheduler['gamma'])
+    elif configs.scheduler['type'] == 'step':
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=configs.scheduler['step_size'],
+                                                    gamma=configs.scheduler['gamma'])
+    else:
+        scheduler = None
 
     # Move data to GPU if available
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -99,11 +129,25 @@ def run_graph_autoencoder(bi_graph, initial_embeddings, num_users, num_items):
 
     # Training Loop
     for epoch in range(configs.epochs):
-        loss = train(bi_graph, model, optimizer)
-        print(f'Epoch {epoch + 1}, Loss: {loss:.4f}')
-        wandb.log({'Train Loss': loss})
-        # embeddings_after_each_epoch = model.encode(data.x, data.edge_index)
-        # get_evaluation(data, embeddings_after_each_epoch, user_indices, item_indices)
+        loss = train(bi_graph, model, optimizer, scheduler)
+
+        model.eval()
+        with torch.no_grad():
+            z = model.encode(bi_graph.x, bi_graph.edge_index)
+            auc, ap = model.test(z,
+                                 pos_edge_index=bi_graph.edge_index,
+                                 neg_edge_index=negative_sampling(bi_graph.edge_index, z.size(0)))
+
+        print(f'Epoch {epoch + 1}, Loss: {loss:.4f}, Learning Rate: {optimizer.param_groups[0]["lr"]}')
+        wandb.log({'Train Loss': loss,
+                   'AUC': auc,
+                   'AP': ap,
+                   'lr_trend': optimizer.param_groups[0]["lr"]
+                   })
+        # wandb.log({'AUC': auc})
+        # wandb.log({'AP': ap})
+        # wandb.log({'lr_trend': optimizer.param_groups[0]["lr"]})
+
 
     # Get embeddings
     model.eval()
