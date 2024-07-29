@@ -1,12 +1,15 @@
+import numpy as np
 import pandas as pd
 import torch
 
 
 def get_top_k(user_embeddings, item_embeddings, k=5):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # Convert numpy embeddings to tensors
-    user_embeddings = torch.from_numpy(user_embeddings).to(device)
-    item_embeddings = torch.from_numpy(item_embeddings).to(device)
+
+    if isinstance(user_embeddings, np.ndarray):
+        user_embeddings = torch.from_numpy(user_embeddings).to(device)
+    if isinstance(item_embeddings, np.ndarray):
+        item_embeddings = torch.from_numpy(item_embeddings).to(device)
 
     # Compute dot product
     dot_product = torch.matmul(user_embeddings, item_embeddings.T)

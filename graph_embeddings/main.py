@@ -41,13 +41,12 @@ utils.set_wandb(wandb_key, RUN_NAME, machine_name, dataset_file)
 # -------------------------------- Load Data --------------------------------
 log.info('Load Data')
 
-
-
-train_df, test_df = preprocessing.split_data(dataset_file,
-                                             sample_ratio=configs.dataset_sample_ratio,
-                                             split_manner=configs.split_manner,
-                                             test_ratio=configs.test_ratio,
-                                             convert_to_timestamp=configs.convert_to_timestamp)
+train_df, val_df, test_df = preprocessing.split_data(dataset_file,
+                                                     sample_ratio=configs.dataset_sample_ratio,
+                                                     split_manner=configs.split_manner,
+                                                     test_ratio=configs.test_ratio,
+                                                     val_ratio=configs.val_ratio,
+                                                     convert_to_timestamp=configs.convert_to_timestamp)
 
 mlflow.set_tag('Data Size', train_df.shape[0])
 mlflow.set_tag('No. of Users', train_df.user_id.nunique())
@@ -61,7 +60,7 @@ wandb.log({
 
 # ----------------------------------------- Run Experiment ----------------------------------------
 log.info('Run Experiment')
-run = Run(train_df, configs)
+run = Run(train_df, val_df, configs)
 model, embeddings = run.start()
 
 mlflow.set_tag('Model', model.__class__.__name__)
@@ -98,22 +97,21 @@ hit_ratio = evaluation.evaluate_hits(test_df, recommendation)
 precision, recall = evaluation.precision_recall_at_k(recommendation, test_set=test_df, k=k)
 ndcg = evaluation.ndcg(recommendation, test_set=test_df, k=k)
 
-
 print(f'Hit Ratio: {hit_ratio:.4f}')
 print(f'Precision_at_{k}: {precision:.4f}')
 print(f'Recall_at_{k}: {recall:.4f}')
 print(f'NDCG_at_{k}: {ndcg:.4f}')
 
-mlflow.log_metric('Hit-Ratio', hit_ratio)
-mlflow.log_metric(f'Precision_at_{k}', precision)
-mlflow.log_metric(f'Recall_at_{k}', recall)
-mlflow.log_metric(f'NDCG_at_{k}', ndcg)
+mlflow.log_metric('Hit-Ratio on Test Data', hit_ratio)
+mlflow.log_metric(f'Precision_at_{k} on Test Data', precision)
+mlflow.log_metric(f'Recall_at_{k} on Test Data', recall)
+mlflow.log_metric(f'NDCG_at_{k} on Test Data', ndcg)
 
 wandb.log({
-    'Precision': precision,
-    'Recall': recall,
-    'NDCG': ndcg,
-    'Hit-Ratio': hit_ratio
+    'Precision on Test Data': precision,
+    'Recall on Test Data': recall,
+    'NDCG on Test Data': ndcg,
+    'Hit-Ratio on Test Data': hit_ratio
 })
 
 # ----------------------------------------- Finishing -----------------------------------------

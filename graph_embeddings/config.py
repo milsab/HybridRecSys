@@ -15,10 +15,11 @@ config_dict = {
 
   "dataset_sample_ratio": 1,
   "test_ratio": 0.2,
+  "val_ratio": 0.1,
 
   "regenerate_bi_graph": False,  # if False => will load bi_graph from file. If True => regenerate bi_graph
 
-  "epochs": 5,
+  "epochs": 50,
 
   "input_size": 64,
   "hidden_size": 128,
@@ -56,6 +57,10 @@ config_dict = {
       "patience": 5
   },
 
+  "recommendation": {
+      "k": 5
+  },
+
   "n_clusters": 5,
   "seed": 10
 
@@ -74,6 +79,7 @@ class Config:
 
         self.dataset_sample_ratio = config_dict.get('dataset_sample_ratio')
         self.test_ratio = config_dict.get('test_ratio')
+        self.val_ratio = config_dict.get('val_ratio')
         self.snapshots_dir = config_dict.get('snapshots_dir')
 
         self.epochs = config_dict.get('epochs')
@@ -96,6 +102,8 @@ class Config:
         self.temporal = config_dict.get('temporal')
 
         self.split_manner = config_dict.get('split_manner')
+
+        self.recommendation = config_dict.get('recommendation')
 
         self.n_clusters = config_dict.get('n_clusters')
 

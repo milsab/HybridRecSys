@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn.functional as F
 from torch_geometric.utils import negative_sampling
@@ -9,18 +10,6 @@ import models
 import ranking
 import evaluation
 import preprocessing
-
-
-def train(data, model, optimizer, scheduler=None):
-    model.train()
-    optimizer.zero_grad()
-    z = model.encode(data.x, data.edge_index)
-    loss = model.recon_loss(z, data.edge_index)
-    loss.backward()
-    optimizer.step()
-    if scheduler is not None:
-        scheduler.step()
-    return loss.item()
 
 
 def get_random_embeddings(num_users, num_items):
@@ -74,7 +63,46 @@ def get_original_embeddings():
     return high_dimension_features
 
 
-def run_graph_autoencoder(bi_graph, initial_embeddings, num_users, num_items):
+def train(data, model, optimizer, scheduler=None):
+    model.train()
+    optimizer.zero_grad()
+    z = model.encode(data.x, data.edge_index)
+    loss = model.recon_loss(z, data.edge_index)
+    loss.backward()
+    optimizer.step()
+    if scheduler is not None:
+        scheduler.step()
+    return loss.item()
+
+
+def validate(bi_graph, train_df, val_df, model):
+    model.eval()
+    with torch.no_grad():
+        z = model.encode(bi_graph.x, bi_graph.edge_index)
+
+        auc, ap = model.test(z,
+                             pos_edge_index=bi_graph.edge_index,
+                             neg_edge_index=negative_sampling(bi_graph.edge_index, z.size(0))
+                             )
+
+        user_indices = np.arange(start=0, stop=len(set(train_df.user_id)), step=1)
+        item_indices = np.arange(start=len(set(train_df.user_id)),
+                                 stop=len(set(train_df.user_id)) + len(set(train_df.item_id)),
+                                 step=1)
+        user_embeddings = z[user_indices]
+        item_embeddings = z[item_indices]
+
+        k = utils.load_config().recommendation['k']
+        recommendations = ranking.get_top_k(user_embeddings, item_embeddings, k=k)
+
+        hit_ratio = evaluation.evaluate_hits(val_df, recommendations)
+        precision, recall = evaluation.precision_recall_at_k(recommendations, test_set=val_df, k=k)
+        ndcg = evaluation.ndcg(recommendations, test_set=val_df, k=k)
+
+    return auc, ap, hit_ratio, precision, recall, ndcg
+
+
+def run_graph_autoencoder(bi_graph, train_df, val_df, initial_embeddings, num_users, num_items):
 
     configs = utils.load_config()
 
@@ -129,25 +157,20 @@ def run_graph_autoencoder(bi_graph, initial_embeddings, num_users, num_items):
 
     # Training Loop
     for epoch in range(configs.epochs):
-        loss = train(bi_graph, model, optimizer, scheduler)
+        train_loss = train(bi_graph, model, optimizer, scheduler)
 
-        model.eval()
-        with torch.no_grad():
-            z = model.encode(bi_graph.x, bi_graph.edge_index)
-            auc, ap = model.test(z,
-                                 pos_edge_index=bi_graph.edge_index,
-                                 neg_edge_index=negative_sampling(bi_graph.edge_index, z.size(0)))
+        auc, ap, hit_ratio, precision, recall, ndcg = validate(bi_graph, train_df, val_df, model)
 
-        print(f'Epoch {epoch + 1}, Loss: {loss:.4f}, Learning Rate: {optimizer.param_groups[0]["lr"]}')
-        wandb.log({'Train Loss': loss,
+        print(f'Epoch {epoch + 1}, Loss: {train_loss:.4f}, lr: {optimizer.param_groups[0]["lr"]}')
+        wandb.log({'Train Loss': train_loss,
                    'AUC': auc,
                    'AP': ap,
+                   'Hit-Ratio': hit_ratio,
+                   'Precision': precision,
+                   'Recall': recall,
+                   'NDCG': ndcg,
                    'lr_trend': optimizer.param_groups[0]["lr"]
                    })
-        # wandb.log({'AUC': auc})
-        # wandb.log({'AP': ap})
-        # wandb.log({'lr_trend': optimizer.param_groups[0]["lr"]})
-
 
     # Get embeddings
     model.eval()

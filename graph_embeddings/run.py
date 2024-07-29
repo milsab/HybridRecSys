@@ -7,8 +7,9 @@ import utils
 
 
 class Run:
-    def __init__(self, train_df, configs):
+    def __init__(self, train_df, val_df, configs):
         self.train_df = train_df
+        self.val_df = val_df
         self.configs = configs
         self.log = utils.get_log()
         self.experiments = {
@@ -29,6 +30,8 @@ class Run:
                                                         temporal=False)  # temporal=False NOT considers Temporal Info
 
         model, embeddings = experiment.run_graph_autoencoder(bi_graph,
+                                                             train_df=self.train_df,
+                                                             val_df=self.val_df,
                                                              initial_embeddings='random',
                                                              num_users=self.train_df.user_id.nunique(),
                                                              num_items=self.train_df.item_id.nunique()
@@ -41,6 +44,8 @@ class Run:
                                                         temporal=True)  # temporal=true adds time as edge_att
 
         model, embeddings = experiment.run_graph_autoencoder(bi_graph,
+                                                             train_df=self.train_df,
+                                                             val_df=self.val_df,
                                                              initial_embeddings='random',
                                                              num_users=self.train_df.user_id.nunique(),
                                                              num_items=self.train_df.item_id.nunique()
@@ -56,6 +61,8 @@ class Run:
 
         self.log.info('run_graph_autoencoder')
         model, embeddings = experiment.run_graph_autoencoder(bi_graph,
+                                                             train_df=self.train_df,
+                                                             val_df=self.val_df,
                                                              initial_embeddings=None,
                                                              num_users=self.train_df.user_id.nunique(),
                                                              num_items=self.train_df.item_id.nunique()
@@ -82,6 +89,8 @@ class Run:
             i += 1
 
             model, embeddings = experiment.run_graph_autoencoder(snapshot_bi_graph,
+                                                                 train_df=self.train_df,
+                                                                 val_df=self.val_df,
                                                                  initial_embeddings=embeddings,
                                                                  num_users=self.train_df.user_id.nunique(),
                                                                  num_items=self.train_df.item_id.nunique())
@@ -108,6 +117,8 @@ class Run:
             i += 1
 
             model, embeddings = experiment.run_graph_autoencoder(snapshot_bi_graph,
+                                                                 train_df=self.train_df,
+                                                                 val_df=self.val_df,
                                                                  initial_embeddings=embeddings,
                                                                  num_users=self.train_df.user_id.nunique(),
                                                                  num_items=self.train_df.item_id.nunique())

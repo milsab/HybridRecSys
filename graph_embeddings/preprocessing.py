@@ -17,7 +17,85 @@ def load_dataset(path, sample_ratio):
     return df
 
 
-def split_data(path, sample_ratio, test_ratio, split_manner, convert_to_timestamp=False):
+def split_data(path, sample_ratio, test_ratio, val_ratio, split_manner, convert_to_timestamp=False):
+    df = load_dataset(path, sample_ratio)
+
+    # Exclude users with less than 3 interaction
+    counts = df['user_id'].value_counts()
+    valid_users = counts[counts > 2].index
+    df = df[df['user_id'].isin(valid_users)]
+
+    # Map user IDs to unique integer indices starts from zero
+    new_user_ids = pd.factorize(df.user_id)[0]
+    df.user_id = new_user_ids
+    # Map item IDs to unique integer indices starts from the last user_id
+    item_ids = pd.factorize(df.item_id)[0] + len(set(new_user_ids))
+    df.item_id = item_ids
+
+    # Convert timestamps to UNIX time
+    if convert_to_timestamp:
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        df['timestamp'] = df['timestamp'].astype('int64') // 1e9
+
+    # Normalize the UNIX timestamps to use as edge attributes
+    df['edge_attr'] = (df['timestamp'] - df['timestamp'].min()) / (
+            df['timestamp'].max() - df['timestamp'].min())
+
+    # Function to split data for a single user with random selection
+    def split_user_data_random(user_df):
+        user_df = user_df.sample(frac=1, random_state=utils.load_config().seed).reset_index(drop=True)
+
+        n_items = len(user_df)
+
+        n_test = math.ceil(n_items * test_ratio)
+        n_val = math.ceil(n_items * val_ratio)
+        n_train = n_items - n_test - n_val
+
+        train_usr = user_df.iloc[: n_train]
+        val_usr = user_df.iloc[n_train: n_train + n_val]
+        test_usr = user_df.iloc[-n_test:]
+
+        return train_usr, val_usr, test_usr
+
+    # Function to split data for a single user with temporal manner
+    def split_user_data_temporal(user_df):
+        user_df = user_df.sort_values('timestamp')
+        n_items = len(user_df)
+
+        n_test = math.ceil(n_items * test_ratio)
+        n_val = math.ceil(n_items * val_ratio)
+        n_train = n_items - n_test - n_val
+
+        train_usr = user_df.iloc[: n_train]
+        val_usr = user_df.iloc[n_train: n_train + n_val]
+        test_usr = user_df.iloc[-n_test:]
+
+        return train_usr, val_usr, test_usr
+
+    # Group by user and apply splitting function
+    train_list = []
+    val_list = []
+    test_list = []
+    for user_id, group in df.groupby('user_id'):
+        if split_manner == 'random':
+            train_user, val_user, test_user = split_user_data_random(group)
+        elif split_manner == 'temporal':
+            train_user, val_user, test_user = split_user_data_temporal(group)
+        else:
+            raise '"split_manner" not recognized.'
+        train_list.append(train_user)
+        val_list.append(val_user)
+        test_list.append(test_user)
+
+    # Concatenate all individual user splits into train and test DataFrames
+    train_df = pd.concat(train_list)
+    val_df = pd.concat(val_list)
+    test_df = pd.concat(test_list)
+
+    return train_df, val_df, test_df
+
+
+def split_data_only_train_test(path, sample_ratio, test_ratio, split_manner, convert_to_timestamp=False):
     df = load_dataset(path, sample_ratio)
 
     # Exclude users with only one interaction
