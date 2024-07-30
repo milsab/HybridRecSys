@@ -65,8 +65,4 @@ class GraphAutoEncoder(GAE):
     def __init__(self, encoder):
         super(GraphAutoEncoder, self).__init__(encoder)
 
-    # def decode(self, z, pos_edge_index, neg_edge_index=None):
-    #     edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=-1) if neg_edge_index is not None else pos_edge_index
-    #     return (z[edge_index[0]] * z[edge_index[1]]).sum(dim=-1)
-
 

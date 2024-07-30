@@ -128,7 +128,7 @@ def run_graph_autoencoder(bi_graph, train_df, val_df, initial_embeddings, num_us
                                     head=configs.model['attention_head'],
                                     dropout=configs.model['dropout'])
     elif configs.model['encoder_type'] == 'GCN':
-        encoder = models.GATEncoder(in_channels=configs.input_size,
+        encoder = models.GCNEncoder(in_channels=configs.input_size,
                                     out_channels=configs.embedding_size,
                                     hidden_dim=configs.hidden_size,
                                     dropout=configs.model['dropout'])

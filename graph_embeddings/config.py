@@ -19,7 +19,7 @@ config_dict = {
 
   "regenerate_bi_graph": False,  # if False => will load bi_graph from file. If True => regenerate bi_graph
 
-  "epochs": 50,
+  "epochs": 500,
 
   "input_size": 64,
   "hidden_size": 128,
@@ -43,7 +43,6 @@ config_dict = {
   "optimizer": {
     "type": "Adam",
     "learning_rate": 0.001,
-    "momentum": 0.9,
     "weight_decay": 0.0005,
   },
 
@@ -53,7 +52,7 @@ config_dict = {
       # "type": "exponential",
       # "type": "step",
       "step_size": 10,
-      "gamma": 0.1,
+      "gamma": 0.8,
       "patience": 5
   },
 
