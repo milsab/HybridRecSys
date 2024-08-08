@@ -1,10 +1,10 @@
 config_dict = {
   "experiment_name": "GRAPH_EMBEDDING",
 
-  "experiment_type": "no_time",   # node_features initialize randomly
+  # "experiment_type": "no_time",   # node_features initialize randomly
   # "experiment_type": "time_edge_random",   # time as edge_attr | node_features initialize randomly
   # "experiment_type": "time_edge_original",  # time as edge_attr | node_features initialize with user&item features
-  # "experiment_type": "time_snapshot_iterative_random",  # time as series of snapshots with iterative approach (random node features)
+  "experiment_type": "time_snapshot_iterative_random",  # time as series of snapshots with iterative approach (random node features)
   # "experiment_type": "time_snapshot_iterative_original",  # time as series of snapshots with iterative approach
 
 
@@ -19,7 +19,7 @@ config_dict = {
 
   "regenerate_bi_graph": False,  # if False => will load bi_graph from file. If True => regenerate bi_graph
 
-  "epochs": 500,
+  "epochs": 10,
 
   "input_size": 64,
   "hidden_size": 128,
@@ -29,7 +29,7 @@ config_dict = {
   "feedforward_network_hidden_size": 128,  # use for creating original embedding out of the node features
   "feedforward_network_learning_rate": 0.01,  # use for creating original embedding out of the node features
 
-  "timeframe": "M",
+  "timeframe": "W",
   "temporal": True,  # if 'True' then we add timestamp as edge features
   "split_manner": "temporal",  # if 'temporal' => Temporal Split, if 'random' => Random Split
 
@@ -44,6 +44,7 @@ config_dict = {
     "type": "Adam",
     "learning_rate": 0.001,
     "weight_decay": 0.0005,
+    "amsgrad": False
   },
 
   "scheduler": {

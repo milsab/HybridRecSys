@@ -137,7 +137,11 @@ def run_graph_autoencoder(bi_graph, train_df, val_df, initial_embeddings, num_us
 
     optimizer = torch.optim.Adam(model.parameters(),
                                  lr=configs.optimizer['learning_rate'],
-                                 weight_decay=configs.optimizer['weight_decay'])
+                                 weight_decay=configs.optimizer['weight_decay'],
+                                 amsgrad=configs.optimizer['amsgrad'])
+
+    # optimizer = torch.optim.RMSprop(model.parameters(),
+    #                                 lr=configs.optimizer['learning_rate'])
 
     if configs.scheduler['type'] == 'plateau':
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=configs.scheduler['gamma'],
