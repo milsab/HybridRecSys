@@ -1,6 +1,6 @@
 # **HybridRecSys: An Advanced Hybrid Recommendation System** ⚡
 
-HybridRecSys is an innovative hybrid recommendation system that integrates **collaborative filtering** and **content-based approaches** to provide highly personalized recommendations. By leveraging the power of **graph neural networks (GNNs) 🧠**, HybridRecSys effectively models and utilizes the intricate relationships between users and items, capturing both direct and indirect interactions.
+HybridRecSys is an innovative hybrid recommendation system that integrates **collaborative filtering** and **content-based approaches** to provide highly personalized recommendations. By leveraging the power of **graph neural networks (GNNs)**, HybridRecSys effectively models and utilizes the intricate relationships between users and items, capturing both direct and indirect interactions.
 
 ---
 
