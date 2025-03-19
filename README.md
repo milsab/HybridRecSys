@@ -4,7 +4,7 @@ HybridRecSys is an innovative hybrid recommendation system that integrates **col
 
 ---
 
-## ✨*Key Features and Advantages** 
+## ✨ **Key Features and Advantages** 
 
 ### **1. Combination of Collaborative and Content-Based Filtering 🏆**
 - The system harnesses **collaborative filtering** to identify patterns in user interactions, ensuring recommendations are based on collective user behaviors.  
@@ -24,7 +24,7 @@ HybridRecSys is an innovative hybrid recommendation system that integrates **col
 
 ---
 
-##💡**Applications of HybridRecSys** 
+## 💡 **Applications of HybridRecSys** 
 - **🛒 E-commerce:** Personalized **product recommendations** based on purchase history and browsing behavior.  
 - **🎥 Streaming Services:** Tailored **movie, music, or podcast suggestions** by analyzing viewing/listening patterns.  
 - **📚 Online Learning Platforms:** Course recommendations based on **user interests and previous learning history**.  
